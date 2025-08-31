@@ -24,16 +24,36 @@
             <input type="number" id="custom-timer" placeholder="Minutes" min="1" max="300" style="display: none;">
         </div>
 
+        <!-- Game Options -->
+        <div class="game-options">
+            <label class="option-toggle">
+                <input type="checkbox" id="auto-flip-board">
+                <span class="option-label">Auto-flip board for Black</span>
+            </label>
+            <label class="option-toggle">
+                <input type="checkbox" id="enable-undo">
+                <span class="option-label">Enable undo moves</span>
+            </label>
+        </div>
+
         <!-- Game Status and Timers -->
         <div class="game-info">
             <div class="player-timers">
                 <div class="timer white-timer">
                     <span class="timer-label">White:</span>
-                    <span id="white-timer">--:--</span>
+                    <div class="timer-time">
+                        <span id="white-timer">--:--</span>
+                        <span id="white-deciseconds" class="timer-deciseconds" style="display: none;"></span>
+                        <span id="white-centiseconds" class="timer-centiseconds" style="display: none;"></span>
+                    </div>
                 </div>
                 <div class="timer black-timer">
                     <span class="timer-label">Black:</span>
-                    <span id="black-timer">--:--</span>
+                    <div class="timer-time">
+                        <span id="black-timer">--:--</span>
+                        <span id="black-deciseconds" class="timer-deciseconds" style="display: none;"></span>
+                        <span id="black-centiseconds" class="timer-centiseconds" style="display: none;"></span>
+                    </div>
                 </div>
             </div>
             <div class="current-player" id="game-status">Current Player: <span id="current-player">White</span></div>
@@ -59,6 +79,7 @@
         <!-- Game Controls -->
         <div class="game-controls">
             <button id="reset-btn">New Game</button>
+            <button id="undo-btn" style="display: none;">Undo Move</button>
             <button id="resign-btn">Resign</button>
             <button id="draw-btn">Offer Draw</button>
             <button id="start-timer-btn" style="display: none;">Start Game</button>

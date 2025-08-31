@@ -17,6 +17,15 @@ class ChessGame {
         this.customTimerInput = document.getElementById('custom-timer');
         this.whiteTimerElement = document.getElementById('white-timer');
         this.blackTimerElement = document.getElementById('black-timer');
+        this.whiteDecisecondsElement = document.getElementById('white-deciseconds');
+        this.blackDecisecondsElement = document.getElementById('black-deciseconds');
+        this.whiteCentisecondsElement = document.getElementById('white-centiseconds');
+        this.blackCentisecondsElement = document.getElementById('black-centiseconds');
+        
+        // Game option elements
+        this.autoFlipToggle = document.getElementById('auto-flip-board');
+        this.undoToggle = document.getElementById('enable-undo');
+        this.undoBtn = document.getElementById('undo-btn');
         
         // Modal elements
         this.promotionModal = document.getElementById('promotion-modal');
@@ -29,6 +38,7 @@ class ChessGame {
         // Game state tracking
         this.gameState = 'setup'; // 'setup', 'playing', 'check', 'checkmate', 'stalemate', 'draw', 'resigned'
         this.moveHistory = [];
+        this.gameStateHistory = []; // For undo functionality
         this.castlingRights = {
             white: { kingside: true, queenside: true },
             black: { kingside: true, queenside: true }
@@ -38,8 +48,16 @@ class ChessGame {
         this.fullMoveNumber = 1;
         this.drawOffered = false;
         
+        // Game options
+        this.autoFlipEnabled = false;
+        this.undoEnabled = false;
+        
         // Timer state
         this.timers = {
+            white: 0,
+            black: 0
+        };
+        this.preciseTiming = {
             white: 0,
             black: 0
         };
@@ -107,6 +125,7 @@ class ChessGame {
         this.setupEventListeners();
         this.updateGameStatus();
         this.updateTimerDisplay();
+        this.updateUndoButton();
     }
 
     setupEventListeners() {
@@ -114,9 +133,31 @@ class ChessGame {
         this.resignBtn.addEventListener('click', () => this.resignGame());
         this.drawBtn.addEventListener('click', () => this.offerDraw());
         this.startTimerBtn.addEventListener('click', () => this.startGame());
+        this.undoBtn.addEventListener('click', () => this.undoMove());
         
         this.timerSelect.addEventListener('change', () => this.handleTimerChange());
         this.customTimerInput.addEventListener('input', () => this.handleCustomTimer());
+        
+        // Game options
+        this.autoFlipToggle.addEventListener('change', (e) => {
+            this.autoFlipEnabled = e.target.checked;
+        });
+        
+        this.undoToggle.addEventListener('change', (e) => {
+            this.undoEnabled = e.target.checked;
+            this.updateUndoButton();
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.clearSelection();
+                this.renderBoard();
+            } else if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                this.undoMove();
+            }
+        });
         
         // Promotion modal listeners
         document.querySelectorAll('.promotion-piece').forEach(button => {
@@ -157,6 +198,8 @@ class ChessGame {
         this.timerEnabled = seconds > 0;
         this.timers.white = seconds;
         this.timers.black = seconds;
+        this.preciseTiming.white = seconds * 1000; // Store in milliseconds for precision
+        this.preciseTiming.black = seconds * 1000;
         
         if (this.timerEnabled) {
             this.startTimerBtn.style.display = 'inline-block';
@@ -185,9 +228,19 @@ class ChessGame {
             clearInterval(this.timerInterval);
         }
         
+        this.lastTimerUpdate = Date.now();
         this.timerInterval = setInterval(() => {
             if (this.gameState === 'playing' || this.gameState === 'check') {
-                this.timers[this.currentPlayer]--;
+                const now = Date.now();
+                const elapsed = now - this.lastTimerUpdate;
+                this.lastTimerUpdate = now;
+                
+                // Update precise timing
+                this.preciseTiming[this.currentPlayer] -= elapsed;
+                
+                // Update seconds-based timer
+                const newSeconds = Math.ceil(this.preciseTiming[this.currentPlayer] / 1000);
+                this.timers[this.currentPlayer] = Math.max(0, newSeconds);
                 
                 if (this.timers[this.currentPlayer] <= 0) {
                     this.endGameByTime();
@@ -196,7 +249,7 @@ class ChessGame {
                 
                 this.updateTimerDisplay();
             }
-        }, 1000);
+        }, 10); // Update every 10ms for smooth display
     }
 
     endGameByTime() {
@@ -215,18 +268,64 @@ class ChessGame {
     }
 
     updateTimerDisplay() {
+        if (!this.timerEnabled) {
+            this.whiteTimerElement.textContent = '∞';
+            this.blackTimerElement.textContent = '∞';
+            this.whiteDecisecondsElement.style.display = 'none';
+            this.blackDecisecondsElement.style.display = 'none';
+            this.whiteCentisecondsElement.style.display = 'none';
+            this.blackCentisecondsElement.style.display = 'none';
+            return;
+        }
+        
+        // Update main timer display
         this.whiteTimerElement.textContent = this.formatTime(this.timers.white);
         this.blackTimerElement.textContent = this.formatTime(this.timers.black);
         
+        // Show/hide deciseconds and centiseconds only for times under 10 seconds
+        const whiteShowPrecision = this.timers.white <= 10 && this.timers.white > 0;
+        const blackShowPrecision = this.timers.black <= 10 && this.timers.black > 0;
+        
+        if (whiteShowPrecision) {
+            const deciseconds = Math.floor((this.preciseTiming.white % 1000) / 100);
+            const centiseconds = Math.floor((this.preciseTiming.white % 100) / 10);
+            this.whiteDecisecondsElement.textContent = `.${deciseconds}`;
+            this.whiteDecisecondsElement.style.display = 'inline';
+            this.whiteCentisecondsElement.textContent = `${centiseconds}`;
+            this.whiteCentisecondsElement.style.display = 'inline';
+        } else {
+            this.whiteDecisecondsElement.style.display = 'none';
+            this.whiteCentisecondsElement.style.display = 'none';
+        }
+        
+        if (blackShowPrecision) {
+            const deciseconds = Math.floor((this.preciseTiming.black % 1000) / 100);
+            const centiseconds = Math.floor((this.preciseTiming.black % 100) / 10);
+            this.blackDecisecondsElement.textContent = `.${deciseconds}`;
+            this.blackDecisecondsElement.style.display = 'inline';
+            this.blackCentisecondsElement.textContent = `${centiseconds}`;
+            this.blackCentisecondsElement.style.display = 'inline';
+        } else {
+            this.blackDecisecondsElement.style.display = 'none';
+            this.blackCentisecondsElement.style.display = 'none';
+        }
+        
         // Update timer highlighting
-        document.querySelector('.white-timer').classList.toggle('active', 
+        const whiteTimer = document.querySelector('.white-timer');
+        const blackTimer = document.querySelector('.black-timer');
+        
+        whiteTimer.classList.toggle('active', 
             this.currentPlayer === 'white' && (this.gameState === 'playing' || this.gameState === 'check'));
-        document.querySelector('.black-timer').classList.toggle('active', 
+        blackTimer.classList.toggle('active', 
             this.currentPlayer === 'black' && (this.gameState === 'playing' || this.gameState === 'check'));
         
-        // Add warning for low time (under 30 seconds)
-        document.querySelector('.white-timer').classList.toggle('warning', this.timers.white <= 30 && this.timers.white > 0);
-        document.querySelector('.black-timer').classList.toggle('warning', this.timers.black <= 30 && this.timers.black > 0);
+        // Add warning classes for low time
+        whiteTimer.classList.toggle('warning', this.timers.white <= 30 && this.timers.white > 10);
+        blackTimer.classList.toggle('warning', this.timers.black <= 30 && this.timers.black > 10);
+        
+        // Add critical warning for very low time (10 seconds or less)
+        whiteTimer.classList.toggle('critical', this.timers.white <= 10 && this.timers.white > 0);
+        blackTimer.classList.toggle('critical', this.timers.black <= 10 && this.timers.black > 0);
     }
 
     formatTime(seconds) {
@@ -325,6 +424,9 @@ class ChessGame {
     }
 
     executeMove(move) {
+        // Save game state for undo
+        this.saveGameState();
+        
         this.makeMove(move);
         this.clearSelection();
         this.drawOffered = false; // Reset draw offer after any move
@@ -342,6 +444,61 @@ class ChessGame {
         this.switchPlayer();
         this.updateGameStatus();
         this.renderBoard();
+        this.updateUndoButton();
+    }
+
+    saveGameState() {
+        this.gameStateHistory.push({
+            board: this.board.map(row => [...row]), // Deep copy
+            currentPlayer: this.currentPlayer,
+            castlingRights: {
+                white: { ...this.castlingRights.white },
+                black: { ...this.castlingRights.black }
+            },
+            enPassantTarget: this.enPassantTarget ? [...this.enPassantTarget] : null,
+            halfMoveClock: this.halfMoveClock,
+            fullMoveNumber: this.fullMoveNumber,
+            timers: { ...this.timers },
+            preciseTiming: { ...this.preciseTiming }
+        });
+    }
+
+    undoMove() {
+        if (!this.undoEnabled || this.gameStateHistory.length === 0) return;
+        if (this.gameState !== 'playing' && this.gameState !== 'check') return;
+        
+        const previousState = this.gameStateHistory.pop();
+        this.moveHistory.pop();
+        
+        // Restore game state
+        this.board = previousState.board;
+        this.currentPlayer = previousState.currentPlayer;
+        this.castlingRights = previousState.castlingRights;
+        this.enPassantTarget = previousState.enPassantTarget;
+        this.halfMoveClock = previousState.halfMoveClock;
+        this.fullMoveNumber = previousState.fullMoveNumber;
+        this.timers = previousState.timers;
+        this.preciseTiming = previousState.preciseTiming;
+        
+        this.clearSelection();
+        this.drawOffered = false;
+        this.flipBoard();
+        this.renderBoard();
+        this.updateGameStatus();
+        this.updateTimerDisplay();
+        this.updateUndoButton();
+    }
+
+    updateUndoButton() {
+        if (!this.undoEnabled) {
+            this.undoBtn.style.display = 'none';
+            return;
+        }
+        
+        this.undoBtn.style.display = 'inline-block';
+        const canUndo = this.gameStateHistory.length > 0 && 
+                       (this.gameState === 'playing' || this.gameState === 'check');
+        this.undoBtn.disabled = !canUndo;
     }
 
     addMoveAnimation(row, col) {
@@ -687,6 +844,18 @@ class ChessGame {
 
     switchPlayer() {
         this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+        this.flipBoard();
+    }
+
+    flipBoard() {
+        if (!this.autoFlipEnabled) return;
+        
+        // Add/remove flipped class based on current player
+        if (this.currentPlayer === 'black') {
+            this.gameBoard.classList.add('flipped');
+        } else {
+            this.gameBoard.classList.remove('flipped');
+        }
     }
 
     updateCurrentPlayer() {
@@ -1041,6 +1210,7 @@ class ChessGame {
         this.validMoves = [];
         this.gameState = this.timerEnabled ? 'setup' : 'playing';
         this.moveHistory = [];
+        this.gameStateHistory = []; // Reset undo history
         this.castlingRights = {
             white: { kingside: true, queenside: true },
             black: { kingside: true, queenside: true }
@@ -1051,6 +1221,9 @@ class ChessGame {
         this.drawOffered = false;
         this.pendingPromotion = null;
         
+        // Reset board flip
+        this.gameBoard.classList.remove('flipped');
+        
         // Reset timers
         this.stopTimer();
         const timerValue = parseInt(this.timerSelect.value) || 0;
@@ -1058,9 +1231,13 @@ class ChessGame {
             const customMinutes = parseInt(this.customTimerInput.value) || 0;
             this.timers.white = customMinutes * 60;
             this.timers.black = customMinutes * 60;
+            this.preciseTiming.white = customMinutes * 60 * 1000;
+            this.preciseTiming.black = customMinutes * 60 * 1000;
         } else {
             this.timers.white = timerValue;
             this.timers.black = timerValue;
+            this.preciseTiming.white = timerValue * 1000;
+            this.preciseTiming.black = timerValue * 1000;
         }
         
         // Show/hide start button
@@ -1073,6 +1250,7 @@ class ChessGame {
         this.renderBoard();
         this.updateGameStatus();
         this.updateTimerDisplay();
+        this.updateUndoButton();
     }
 }
 
