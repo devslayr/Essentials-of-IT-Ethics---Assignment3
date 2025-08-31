@@ -158,10 +158,17 @@ h1 {
 }
 
 /* Board Container with Coordinates */
+.board-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 30px auto 40px auto;
+    min-height: 520px;
+}
+
 .board-container {
     position: relative;
     display: inline-block;
-    margin: 0 auto;
 }
 
 .chess-board {
@@ -172,8 +179,19 @@ h1 {
     border: 2px solid #34495e;
     width: 480px;
     height: 480px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     margin: 0 auto;
+    transition: all 0.3s ease;
+}
+
+.chess-board.check-shake {
+    animation: shake 0.6s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+    20%, 40%, 60%, 80% { transform: translateX(8px); }
 }
 
 .board-coordinates {
@@ -265,17 +283,41 @@ h1 {
     height: 20px;
     border-radius: 50%;
     background-color: rgba(0, 0, 0, 0.3);
+    animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { 
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    50% { 
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
 }
 
 .piece {
     font-size: 2.2rem;
     line-height: 1;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+}
+
+.piece.move-animation {
+    animation: piece-move 0.3s ease;
+}
+
+@keyframes piece-move {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
 .game-controls {
     text-align: center;
-    margin-top: 20px;
+    margin-top: 30px;
+    padding: 20px;
 }
 
 .game-controls button {
@@ -422,62 +464,216 @@ h1 {
 }
 
 /* Responsive design */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .container {
         padding: 10px;
-    }
-    
-    .board-container {
-        transform: scale(0.8);
-        margin: 20px auto;
-    }
-    
-    .chess-board {
-        width: 320px;
-        height: 320px;
-    }
-    
-    .square {
-        font-size: 1.5rem;
-    }
-    
-    .piece {
-        font-size: 1.6rem;
+        max-width: 100%;
     }
     
     h1 {
         font-size: 2rem;
+        margin-bottom: 15px;
     }
     
+    /* Timer controls for mobile */
+    .timer-controls {
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .timer-controls select,
+    .timer-controls input {
+        padding: 8px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    /* Player timers for mobile */
     .player-timers {
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
+        margin-bottom: 10px;
     }
     
     .timer {
         font-size: 1rem;
+        padding: 8px;
+    }
+    
+    /* Game status for mobile */
+    .current-player {
+        font-size: 1rem;
+        padding: 8px;
+        margin-bottom: 15px;
+    }
+    
+    /* Board wrapper for mobile */
+    .board-wrapper {
+        margin: 20px auto 25px auto;
+        min-height: auto;
+        overflow-x: auto;
+        padding: 0 10px;
+    }
+    
+    .board-container {
+        transform: scale(0.75);
+        transform-origin: center;
+        margin: 0 auto;
+    }
+    
+    .chess-board {
+        width: 400px;
+        height: 400px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .square {
+        font-size: 1.4rem;
+    }
+    
+    .piece {
+        font-size: 1.8rem;
+    }
+    
+    /* Coordinates for mobile */
+    .files, .ranks {
+        font-size: 12px;
+    }
+    
+    /* Game controls for mobile */
+    .game-controls {
+        margin-top: 20px;
+        padding: 15px;
     }
     
     .game-controls button {
         display: block;
         width: 100%;
-        margin: 5px 0;
+        margin: 8px 0;
+        padding: 12px 20px;
+        font-size: 1rem;
     }
     
+    /* Modal adjustments for mobile */
     .modal-content {
-        margin: 20% auto;
+        margin: 10% auto;
         padding: 20px;
+        width: 95%;
+        max-width: 350px;
     }
     
     .promotion-pieces {
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 8px;
         justify-content: center;
     }
     
     .promotion-piece {
-        width: 50px;
-        height: 50px;
+        width: 55px;
+        height: 55px;
+        font-size: 1.8rem;
+    }
+    
+    .modal-buttons button {
+        display: block;
+        width: 100%;
+        margin: 8px 0;
+        padding: 12px;
+    }
+}
+
+/* Very small screens (phones in portrait) */
+@media (max-width: 480px) {
+    .container {
+        padding: 5px;
+    }
+    
+    h1 {
+        font-size: 1.8rem;
+        margin-bottom: 10px;
+    }
+    
+    .board-container {
+        transform: scale(0.65);
+    }
+    
+    .chess-board {
+        width: 350px;
+        height: 350px;
+    }
+    
+    .square {
+        font-size: 1.2rem;
+    }
+    
+    .piece {
         font-size: 1.5rem;
+    }
+    
+    .timer-controls {
+        padding: 8px;
+    }
+    
+    .timer-controls select,
+    .timer-controls input {
+        padding: 6px;
+        font-size: 14px;
+    }
+    
+    .current-player {
+        font-size: 0.9rem;
+        padding: 6px;
+    }
+    
+    .game-controls {
+        padding: 10px;
+        margin-top: 15px;
+    }
+    
+    .game-controls button {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+        margin: 6px 0;
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .board-wrapper {
+        margin: 10px auto 15px auto;
+    }
+    
+    .board-container {
+        transform: scale(0.6);
+    }
+    
+    .player-timers {
+        flex-direction: row;
+        gap: 15px;
+    }
+    
+    .game-controls button {
+        display: inline-block;
+        width: auto;
+        margin: 0 5px;
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+    
+    .modal-content {
+        margin: 5% auto;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .promotion-pieces {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 10px;
+    }
+    
+    .modal-buttons button {
+        display: inline-block;
+        width: auto;
+        margin: 0 8px;
     }
 }

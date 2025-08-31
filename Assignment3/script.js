@@ -50,7 +50,41 @@ class ChessGame {
         // Promotion state
         this.pendingPromotion = null;
         
+        // Sound effects
+        this.sounds = {
+            move: this.createSound(800, 0.1, 'sine'),
+            capture: this.createSound(600, 0.15, 'square'),
+            check: this.createSound(1000, 0.2, 'triangle'),
+            gameEnd: this.createSound(400, 0.3, 'sawtooth')
+        };
+        
         this.initializeGame();
+    }
+
+    // Create sound using Web Audio API
+    createSound(frequency, duration, waveType = 'sine') {
+        return () => {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+                oscillator.type = waveType;
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            } catch (error) {
+                // Fallback for browsers without Web Audio API
+                console.log('Sound effect played');
+            }
+        };
     }
 
     initializeBoard() {
@@ -169,6 +203,7 @@ class ChessGame {
         const winner = this.currentPlayer === 'white' ? 'Black' : 'White';
         this.gameState = 'timeout';
         this.stopTimer();
+        this.sounds.gameEnd();
         this.showGameResult(`Time's Up!`, `${winner} wins by timeout!`);
     }
 
@@ -293,9 +328,33 @@ class ChessGame {
         this.makeMove(move);
         this.clearSelection();
         this.drawOffered = false; // Reset draw offer after any move
+        
+        // Play move sound effect
+        if (move.captured || move.isEnPassant) {
+            this.sounds.capture();
+        } else {
+            this.sounds.move();
+        }
+        
+        // Add piece move animation
+        this.addMoveAnimation(move.to[0], move.to[1]);
+        
         this.switchPlayer();
         this.updateGameStatus();
         this.renderBoard();
+    }
+
+    addMoveAnimation(row, col) {
+        setTimeout(() => {
+            const square = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            const piece = square?.querySelector('.piece');
+            if (piece) {
+                piece.classList.add('move-animation');
+                setTimeout(() => {
+                    piece.classList.remove('move-animation');
+                }, 300);
+            }
+        }, 50);
     }
 
     showPromotionModal() {
@@ -857,6 +916,7 @@ class ChessGame {
         
         // Reset all status classes
         this.gameStatusElement.className = 'current-player';
+        this.gameBoard.classList.remove('check-shake');
         
         // Check for checkmate or stalemate
         const hasValidMoves = this.hasValidMoves();
@@ -867,6 +927,7 @@ class ChessGame {
                 this.gameStatusElement.classList.add('checkmate');
                 const winner = this.currentPlayer === 'white' ? 'Black' : 'White';
                 this.currentPlayerElement.textContent = `Checkmate!`;
+                this.sounds.gameEnd();
                 this.showGameResult('Checkmate!', `${winner} wins the game!`);
                 this.stopTimer();
                 return;
@@ -874,6 +935,7 @@ class ChessGame {
                 this.gameState = 'stalemate';
                 this.gameStatusElement.classList.add('stalemate');
                 this.currentPlayerElement.textContent = 'Stalemate!';
+                this.sounds.gameEnd();
                 this.showGameResult('Stalemate!', 'The game is a draw!');
                 this.stopTimer();
                 return;
@@ -884,6 +946,15 @@ class ChessGame {
             this.gameState = 'check';
             this.gameStatusElement.classList.add('check');
             this.currentPlayerElement.textContent = `${this.currentPlayer.charAt(0).toUpperCase() + this.currentPlayer.slice(1)} (Check!)`;
+            
+            // Add shake animation and play check sound
+            this.gameBoard.classList.add('check-shake');
+            this.sounds.check();
+            
+            // Remove shake animation after it completes
+            setTimeout(() => {
+                this.gameBoard.classList.remove('check-shake');
+            }, 600);
         } else {
             this.gameState = 'playing';
             this.updateCurrentPlayer();
@@ -894,6 +965,7 @@ class ChessGame {
             this.gameState = 'draw';
             this.gameStatusElement.classList.add('draw');
             this.currentPlayerElement.textContent = 'Draw by 50-move rule!';
+            this.sounds.gameEnd();
             this.showGameResult('Draw!', 'Game ended by 50-move rule!');
             this.stopTimer();
         }
@@ -927,6 +999,7 @@ class ChessGame {
         const winner = this.currentPlayer === 'white' ? 'Black' : 'White';
         this.gameState = 'resigned';
         this.stopTimer();
+        this.sounds.gameEnd();
         this.showGameResult('Game Resigned', `${this.currentPlayer.charAt(0).toUpperCase() + this.currentPlayer.slice(1)} resigned. ${winner} wins!`);
     }
 
@@ -937,6 +1010,7 @@ class ChessGame {
             // Accept the draw offer
             this.gameState = 'draw';
             this.stopTimer();
+            this.sounds.gameEnd();
             this.showGameResult('Draw Accepted', 'Both players agreed to a draw!');
         } else {
             // Offer a draw
