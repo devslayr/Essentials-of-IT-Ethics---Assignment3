@@ -1620,6 +1620,23 @@ class ChessGame {
   evaluatePosition() {
     let score = 0;
 
+    // First, check for checkmate/stalemate
+    const originalPlayer = this.currentPlayer;
+    this.currentPlayer = "white";
+    if (!this.hasValidMoves()) {
+      if (this.isKingInCheck("white")) {
+        score = -10000; // White is checkmated
+      }
+    }
+    
+    this.currentPlayer = "black";
+    if (!this.hasValidMoves()) {
+      if (this.isKingInCheck("black")) {
+        score = 10000; // Black is checkmated
+      }
+    }
+    this.currentPlayer = originalPlayer;
+
     // Material evaluation
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
@@ -1630,11 +1647,46 @@ class ChessGame {
           // Position bonus for pawns
           if (piece === "♙") score += (7 - row) * 0.1;
           if (piece === "♟") score -= row * 0.1;
+
+          // Bonus for attacking squares around enemy king
+          if (this.isPieceColor(piece, "white")) {
+            const blackKing = this.findKing("black");
+            if (blackKing) {
+              const moves = this.getValidMovesWithoutCheckTest(row, col);
+              for (const [moveRow, moveCol] of moves) {
+                if (Math.abs(moveRow - blackKing[0]) <= 1 && 
+                    Math.abs(moveCol - blackKing[1]) <= 1) {
+                  score += 0.5; // Bonus for controlling squares near enemy king
+                }
+              }
+            }
+          } else {
+            const whiteKing = this.findKing("white");
+            if (whiteKing) {
+              const moves = this.getValidMovesWithoutCheckTest(row, col);
+              for (const [moveRow, moveCol] of moves) {
+                if (Math.abs(moveRow - whiteKing[0]) <= 1 && 
+                    Math.abs(moveCol - whiteKing[1]) <= 1) {
+                  score -= 0.5; // Bonus for controlling squares near enemy king
+                }
+              }
+            }
+          }
         }
       }
     }
 
+    // Add check bonus
+    if (this.isKingInCheck("white")) score -= 5;
+    if (this.isKingInCheck("black")) score += 5;
+
     return score;
+  }
+
+  isKingInCheck(color) {
+    const kingPos = this.findKing(color);
+    if (!kingPos) return false;
+    return this.isSquareUnderAttack(kingPos[0], kingPos[1], color);
   }
 
   minimax(depth, alpha, beta, maximizingPlayer) {
@@ -1739,6 +1791,21 @@ class ChessGame {
 
     // Use setTimeout to allow the UI to update
     await new Promise((resolve) => setTimeout(resolve, 100));
+    
+    // Check if we can capture the king immediately
+    const moves = this.getAllPossibleMoves(this.botColor);
+    const kingCaptures = moves.filter(move => {
+      const targetPiece = this.board[move.to[0]][move.to[1]];
+      return targetPiece === (this.botColor === "white" ? "♚" : "♔");
+    });
+    
+    if (kingCaptures.length > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      this.executeMove(kingCaptures[0]);
+      this.botThinking = false;
+      this.thinkingIndicator.style.display = "none";
+      return;
+    }
 
     try {
       const moves = this.getAllPossibleMoves(this.botColor);
