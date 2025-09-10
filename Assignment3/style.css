@@ -73,6 +73,26 @@ h1 {
     color: #2c3e50;
 }
 
+#bot-difficulty {
+    margin-left: 10px;
+    padding: 5px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+}
+
+.thinking {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    z-index: 100;
+    display: none;
+}
+
 /* Player Timers */
 .player-timers {
     display: flex;
