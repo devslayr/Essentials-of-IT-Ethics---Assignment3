@@ -178,6 +178,28 @@ body {
     &:hover {
       transform: scale(1.1);
     }
+
+    // White pieces styling
+    &.piece-white {
+      color: #ffffff;
+      text-shadow: 
+        1px 1px 0 #000000,
+        -1px -1px 0 #000000,
+        1px -1px 0 #000000,
+        -1px 1px 0 #000000,
+        2px 2px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    // Black pieces styling
+    &.piece-black {
+      color: #1a1a1a;
+      text-shadow: 
+        1px 1px 0 #ffffff,
+        -1px -1px 0 #ffffff,
+        1px -1px 0 #ffffff,
+        -1px 1px 0 #ffffff,
+        2px 2px 3px rgba(255, 255, 255, 0.6);
+    }
   }
 }
 
