@@ -7,11 +7,16 @@ export class NotationTable {
   private moves: NotationEntry[] = [];
   private currentMoveIndex: number = -1;
   private tableElement!: HTMLElement;
+  private onPositionChangeCallback?: () => void;
 
   constructor(container: HTMLElement, engine: ChessEngine) {
     this.container = container;
     this.engine = engine;
     this.createTable();
+  }
+
+  public setPositionChangeCallback(callback: () => void): void {
+    this.onPositionChangeCallback = callback;
   }
 
   private createTable(): void {
@@ -181,8 +186,13 @@ export class NotationTable {
 
     this.currentMoveIndex = moveIndex;
 
-    // TODO: Update board position to show the position after this move
-    // This would require the engine to support position navigation
+    // Update board position using ChessEngine navigation
+    this.engine.goToMoveIndex(moveIndex);
+    
+    // Trigger board update callback
+    if (this.onPositionChangeCallback) {
+      this.onPositionChangeCallback();
+    }
 
     this.renderMoves();
   }

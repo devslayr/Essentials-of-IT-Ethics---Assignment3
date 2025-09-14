@@ -5,7 +5,7 @@ import { GamePanel } from './components/GamePanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AppearanceModal } from './components/AppearanceModal';
 import { CapturedPieces } from './components/CapturedPieces';
-import { GameSettings, Move } from '../shared/types';
+import { GameSettings, Move, Square, PieceType } from '../shared/types';
 import './styles/main.scss';
 
 class ChessApp {
@@ -108,15 +108,29 @@ class ChessApp {
       this.engine
     );
 
+    // Setup callback for position changes during move history navigation
+    this.notationTable.setPositionChangeCallback(() => {
+      this.board.updatePosition();
+    });
+
     this.gamePanel = new GamePanel(
       document.getElementById('game-panel')!,
-      this.engine
+      this.engine,
+      (action: string) => this.handleAction(action)
     );
 
-    // Initialize captured pieces display  
+    // Initialize captured pieces display
+    // Create a single container that will manage both white and black captured pieces
     const capturedContainer = document.createElement('div');
     capturedContainer.className = 'captured-pieces-container';
-    document.getElementById('white-captured')!.appendChild(capturedContainer);
+    // Use the right panel or create a dedicated section for captured pieces
+    const rightPanel = document.querySelector('.right-panel');
+    if (rightPanel) {
+      rightPanel.appendChild(capturedContainer);
+    } else {
+      // Fallback to white-captured if right panel doesn't exist
+      document.getElementById('white-captured')!.appendChild(capturedContainer);
+    }
     this.capturedPieces = new CapturedPieces(capturedContainer);
 
     this.settingsModal = new SettingsModal(
@@ -223,6 +237,9 @@ class ChessApp {
       case 'new-game':
         this.newGame();
         break;
+      case 'undo':
+        this.undoMove();
+        break;
     }
   }
 
@@ -257,19 +274,96 @@ class ChessApp {
       this.capturedPieces.addCapturedPiece(move.capturedPiece);
     }
 
+    // Switch timer to next player
+    this.gamePanel.switchPlayer();
+
     // Update game panel
     this.gamePanel.updateGameStatus();
 
     // Play move sound
     this.playMoveSound(move);
+
+    // Handle bot move if in bot mode
+    this.handleBotMove();
+  }
+
+  private handleBotMove(): void {
+    const gameMode = this.gamePanel.getGameMode();
+    if (gameMode === 'bot' && this.engine.getCurrentPlayer() === 'black') {
+      // Add a reasonable delay for bot move to feel more natural
+      setTimeout(() => {
+        this.makeIntelligentBotMove();
+      }, 800); // Single timeout with reasonable delay
+    }
+  }
+
+  private makeIntelligentBotMove(): void {
+    const legalMoves = this.engine.getAllLegalMoves();
+    if (legalMoves.length === 0) return;
+
+    let selectedMove = legalMoves[0];
+    const difficulty = this.gamePanel.getBotDifficulty();
+
+    if (difficulty <= 5) {
+      // Easy: Random move
+      selectedMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+    } else if (difficulty <= 10) {
+      // Medium: Prefer captures and checks
+      const capturesMoves = legalMoves.filter(move => {
+        const targetPiece = this.engine.getPiece(move.to);
+        return targetPiece && targetPiece.color !== this.engine.getCurrentPlayer();
+      });
+      
+      if (capturesMoves.length > 0) {
+        selectedMove = capturesMoves[Math.floor(Math.random() * capturesMoves.length)];
+      } else {
+        selectedMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+      }
+    } else {
+      // Hard: More strategic (still simplified)
+      // Prefer center squares, captures, and avoid hanging pieces
+      let bestMoves = legalMoves;
+      
+      // Prefer captures
+      const captures = legalMoves.filter(move => {
+        const targetPiece = this.engine.getPiece(move.to);
+        return targetPiece && targetPiece.color !== this.engine.getCurrentPlayer();
+      });
+      
+      if (captures.length > 0) {
+        bestMoves = captures;
+      }
+      
+      selectedMove = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+    }
+
+    const move = this.engine.makeMove(selectedMove.from, selectedMove.to, selectedMove.promotion);
+    if (move) {
+      // First update the board position
+      this.board.updatePosition();
+      
+      // Animate the bot move
+      this.board.animateMove(move);
+      
+      // Use the same handleMove method to ensure consistency
+      // This will update notation table, captured pieces, game panel, etc.
+      this.handleMove(move);
+    }
   }
 
   private undoMove(): void {
     const undoneMove = this.engine.undoMove();
     if (undoneMove) {
+      // Cancel any ongoing animations to prevent conflicts
+      this.board.cancelAnimations();
       this.board.updatePosition();
       this.notationTable.removeLastMove();
       this.gamePanel.updateGameStatus();
+      
+      // If the undone move captured a piece, remove it from captured pieces
+      if (undoneMove.capturedPiece) {
+        this.capturedPieces.removeCapturedPiece(undoneMove.capturedPiece);
+      }
     }
   }
 

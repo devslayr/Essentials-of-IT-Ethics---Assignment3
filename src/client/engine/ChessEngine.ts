@@ -298,6 +298,57 @@ export class ChessEngine {
     return pseudoLegalMoves.filter(move => !this.wouldBeInCheck(square, move.to, move.promotion));
   }
 
+  public getCurrentPlayer(): PieceColor {
+    return this.gameState.currentPlayer;
+  }
+
+  public getFen(): string {
+    // Convert board to FEN notation
+    let fen = '';
+    
+    // Board position
+    for (let row = 0; row < 8; row++) {
+      let emptyCount = 0;
+      for (let col = 0; col < 8; col++) {
+        const piece = this.gameState.board[row][col];
+        if (piece) {
+          if (emptyCount > 0) {
+            fen += emptyCount;
+            emptyCount = 0;
+          }
+          fen += this.pieceToChar(piece);
+        } else {
+          emptyCount++;
+        }
+      }
+      if (emptyCount > 0) {
+        fen += emptyCount;
+      }
+      if (row < 7) {
+        fen += '/';
+      }
+    }
+    
+    // Active color
+    fen += ` ${this.gameState.currentPlayer === 'white' ? 'w' : 'b'}`;
+    
+    // Castling availability
+    let castling = '';
+    if (this.gameState.castlingRights.whiteKingside) castling += 'K';
+    if (this.gameState.castlingRights.whiteQueenside) castling += 'Q';
+    if (this.gameState.castlingRights.blackKingside) castling += 'k';
+    if (this.gameState.castlingRights.blackQueenside) castling += 'q';
+    fen += ` ${castling || '-'}`;
+    
+    // En passant target square
+    fen += ` ${this.gameState.enPassantTarget || '-'}`;
+    
+    // Halfmove clock and fullmove number
+    fen += ` ${this.gameState.halfmoveClock} ${this.gameState.fullmoveNumber}`;
+    
+    return fen;
+  }
+
   private getPseudoLegalMoves(square: Square): Array<{ to: Square, promotion?: PieceType }> {
     const piece = this.getPiece(square);
     if (!piece) return [];
@@ -829,6 +880,9 @@ export class ChessEngine {
     if (this.gameState.moves.length === 0) return null;
 
     const lastMove = this.gameState.moves.pop()!;
+    
+    // Remember who made the move we're undoing - it should remain their turn
+    const playerWhoMadeMove = lastMove.piece.color;
 
     // Restore position from FEN of previous move or initial position
     const previousFen = this.gameState.moves.length > 0
@@ -845,6 +899,9 @@ export class ChessEngine {
       this.makeMove(move.from, move.to, move.promotion);
     });
 
+    // After undo, it should be the turn of the player who made the undone move
+    this.gameState.currentPlayer = playerWhoMadeMove;
+
     return lastMove;
   }
 
@@ -860,5 +917,56 @@ export class ChessEngine {
       return 'draw';
     }
     return '*';
+  }
+
+  public goToMoveIndex(moveIndex: number): void {
+    const totalMoves = this.gameState.moves.length;
+    
+    if (moveIndex < -1 || moveIndex >= totalMoves) return;
+    
+    if (moveIndex === -1) {
+      // Go to starting position
+      this.resetToInitialPosition();
+    } else if (moveIndex < totalMoves - 1) {
+      // Go to a previous position by replaying moves
+      this.resetToInitialPosition();
+      for (let i = 0; i <= moveIndex; i++) {
+        const move = this.gameState.moves[i];
+        this.replayMove(move);
+      }
+    }
+    // If moveIndex is the current position, no action needed
+  }
+
+  private resetToInitialPosition(): void {
+    // Store current moves for replay
+    const moves = [...this.gameState.moves];
+    
+    // Reset to initial position using starting FEN
+    this.gameState = this.initializeGame();
+    
+    // Restore moves history but clear current position
+    this.gameState.moves = moves;
+  }
+
+  private replayMove(move: Move): void {
+    // Replay a move without adding it to history again
+    const piece = this.getPiece(move.from);
+    if (!piece) return;
+
+    // Execute the move mechanics without updating moves array
+    this.gameState.board[ChessUtils.squareToIndex(move.to).row][ChessUtils.squareToIndex(move.to).col] = piece;
+    this.gameState.board[ChessUtils.squareToIndex(move.from).row][ChessUtils.squareToIndex(move.from).col] = null;
+
+    // Handle promotion
+    if (move.promotion) {
+      this.gameState.board[ChessUtils.squareToIndex(move.to).row][ChessUtils.squareToIndex(move.to).col] = {
+        type: move.promotion,
+        color: piece.color
+      };
+    }
+
+    // Update player turn
+    this.gameState.currentPlayer = this.gameState.currentPlayer === 'white' ? 'black' : 'white';
   }
 }

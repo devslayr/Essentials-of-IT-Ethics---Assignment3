@@ -4,10 +4,18 @@ import { GameResult } from '../../shared/types';
 export class GamePanel {
   private container: HTMLElement;
   private engine: ChessEngine;
+  private whiteTime: number = 0; // time in seconds
+  private blackTime: number = 0;
+  private currentPlayer: 'white' | 'black' = 'white';
+  private timerInterval: NodeJS.Timeout | null = null;
+  private gameMode: 'solo' | 'friend' | 'bot' = 'solo';
+  private botDifficulty: number = 10;
+  private actionCallback?: (action: string) => void;
 
-  constructor(container: HTMLElement, engine: ChessEngine) {
+  constructor(container: HTMLElement, engine: ChessEngine, actionCallback?: (action: string) => void) {
     this.container = container;
     this.engine = engine;
+    this.actionCallback = actionCallback;
     this.createPanel();
   }
 
@@ -16,6 +24,16 @@ export class GamePanel {
       <div class="game-panel">
         <div class="game-status">
           <div class="status-text">White to move</div>
+          <div class="game-timers">
+            <div class="timer white-timer">
+              <span class="timer-label">White</span>
+              <span class="timer-display">∞</span>
+            </div>
+            <div class="timer black-timer">
+              <span class="timer-label">Black</span>
+              <span class="timer-display">∞</span>
+            </div>
+          </div>
           <div class="game-info-details">
             <div class="turn-indicator">
               <span class="turn-white active"></span>
@@ -136,6 +154,7 @@ export class GamePanel {
 
     difficultyRange?.addEventListener('input', (event) => {
       const target = event.target as HTMLInputElement;
+      this.botDifficulty = parseInt(target.value);
       if (difficultyValue) {
         difficultyValue.textContent = target.value;
       }
@@ -151,7 +170,12 @@ export class GamePanel {
         this.resign();
         break;
       case 'undo':
-        this.undoMove();
+        // Use the main app's undo callback if available, otherwise fall back to local method
+        if (this.actionCallback) {
+          this.actionCallback('undo');
+        } else {
+          this.undoMove();
+        }
         break;
       case 'abort':
         this.abortGame();
@@ -160,6 +184,7 @@ export class GamePanel {
   }
 
   private handleGameModeChange(mode: string): void {
+    this.gameMode = mode as 'solo' | 'friend' | 'bot';
     const botSettings = this.container.querySelector('.bot-settings');
 
     if (mode === 'bot') {
@@ -180,7 +205,134 @@ export class GamePanel {
       customTimeGroup?.classList.add('hidden');
     }
 
+    // Initialize timers based on time control
+    this.initializeTimers(timeControl);
     this.addLogEntry(`Time control set to: ${timeControl}`);
+  }
+
+  private initializeTimers(timeControl: string): void {
+    // Stop any existing timer
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+
+    let minutes = 0;
+    let increment = 0;
+
+    switch (timeControl) {
+      case 'unlimited':
+        this.whiteTime = 0;
+        this.blackTime = 0;
+        this.updateTimerDisplay();
+        return; // No timer for unlimited
+      case 'blitz':
+        minutes = 5;
+        break;
+      case 'rapid':
+        minutes = 10;
+        break;
+      case 'classical':
+        minutes = 30;
+        break;
+      case 'custom':
+        const initialTimeInput = this.container.querySelector('.initial-time') as HTMLInputElement;
+        const incrementInput = this.container.querySelector('.increment-time') as HTMLInputElement;
+        minutes = parseInt(initialTimeInput?.value || '10');
+        increment = parseInt(incrementInput?.value || '0');
+        break;
+    }
+
+    // Convert minutes to seconds
+    this.whiteTime = minutes * 60;
+    this.blackTime = minutes * 60;
+    this.updateTimerDisplay();
+
+    // Don't start the timer automatically - it should start when the first move is made
+  }
+
+  private startTimer(): void {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
+
+    this.timerInterval = setInterval(() => {
+      if (this.currentPlayer === 'white' && this.whiteTime > 0) {
+        this.whiteTime--;
+      } else if (this.currentPlayer === 'black' && this.blackTime > 0) {
+        this.blackTime--;
+      }
+
+      this.updateTimerDisplay();
+
+      // Check for time expiration
+      if (this.whiteTime <= 0 || this.blackTime <= 0) {
+        this.handleTimeExpired();
+      }
+    }, 1000);
+  }
+
+  private stopTimer(): void {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+  }
+
+  private updateTimerDisplay(): void {
+    const whiteTimerDisplay = this.container.querySelector('.white-timer .timer-display');
+    const blackTimerDisplay = this.container.querySelector('.black-timer .timer-display');
+
+    if (whiteTimerDisplay) {
+      whiteTimerDisplay.textContent = this.whiteTime === 0 ? '∞' : this.formatTime(this.whiteTime);
+    }
+    if (blackTimerDisplay) {
+      blackTimerDisplay.textContent = this.blackTime === 0 ? '∞' : this.formatTime(this.blackTime);
+    }
+
+    // Update timer styles to show active player
+    const whiteTimer = this.container.querySelector('.white-timer');
+    const blackTimer = this.container.querySelector('.black-timer');
+    
+    whiteTimer?.classList.toggle('active', this.currentPlayer === 'white');
+    blackTimer?.classList.toggle('active', this.currentPlayer === 'black');
+  }
+
+  private formatTime(seconds: number): string {
+    if (seconds <= 0) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  private handleTimeExpired(): void {
+    this.stopTimer();
+    const winner = this.whiteTime <= 0 ? 'Black' : 'White';
+    this.addLogEntry(`Time expired! ${winner} wins!`);
+    
+    // Update status
+    const statusText = this.container.querySelector('.status-text');
+    if (statusText) {
+      statusText.textContent = `${winner} wins on time!`;
+    }
+  }
+
+  public switchPlayer(): void {
+    this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+    
+    // Start timer on first move if we have timed control
+    if (!this.timerInterval && (this.whiteTime > 0 || this.blackTime > 0)) {
+      this.startTimer();
+    }
+    
+    this.updateTimerDisplay();
+    
+    // Update turn indicator
+    const whiteIndicator = this.container.querySelector('.turn-white');
+    const blackIndicator = this.container.querySelector('.turn-black');
+    
+    whiteIndicator?.classList.toggle('active', this.currentPlayer === 'white');
+    blackIndicator?.classList.toggle('active', this.currentPlayer === 'black');
   }
 
   private offerDraw(): void {
@@ -296,6 +448,12 @@ export class GamePanel {
   }
 
   public reset(): void {
+    // Stop the timer
+    this.stopTimer();
+    
+    // Reset player to white
+    this.currentPlayer = 'white';
+    
     // Re-enable action buttons
     const actionButtons = this.container.querySelectorAll('.action-btn');
     actionButtons.forEach(button => {
@@ -305,6 +463,11 @@ export class GamePanel {
     // Clear log
     const logContent = this.container.querySelector('.log-content')!;
     logContent.innerHTML = '<div class="log-entry">Game started</div>';
+
+    // Reset timers based on current time control
+    const timeControlSelect = this.container.querySelector('.time-control-select') as HTMLSelectElement;
+    const currentTimeControl = timeControlSelect?.value || 'unlimited';
+    this.initializeTimers(currentTimeControl);
 
     // Reset status
     this.updateGameStatus();
@@ -343,5 +506,13 @@ export class GamePanel {
       default:
         return null;
     }
+  }
+
+  public getGameMode(): 'solo' | 'friend' | 'bot' {
+    return this.gameMode;
+  }
+
+  public getBotDifficulty(): number {
+    return this.botDifficulty;
   }
 }

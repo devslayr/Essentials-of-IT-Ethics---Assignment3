@@ -13,12 +13,23 @@ export class ChessBoard {
   private legalMoves: Array<{ to: Square, promotion?: string }> = [];
   private promotionCallback: ((pieceType: string) => void) | null = null;
   private moveCallback?: (move: Move) => void;
+  private boundMouseMove: (event: MouseEvent) => void;
+  private boundMouseUp: (event: MouseEvent) => void;
+  private isDragging: boolean = false;
+  private dragStartTime: number = 0;
+  private dragStartPosition: { x: number; y: number } = { x: 0, y: 0 };
+  private animationTimeout: NodeJS.Timeout | null = null;
 
   constructor(container: HTMLElement, engine: ChessEngine, settings: GameSettings, moveCallback?: (move: Move) => void) {
     this.container = container;
     this.engine = engine;
     this.settings = settings;
     this.moveCallback = moveCallback;
+    
+    // Bind event handlers to avoid memory leaks
+    this.boundMouseMove = this.handleMouseMove.bind(this);
+    this.boundMouseUp = this.handleMouseUp.bind(this);
+    
     this.createBoard();
     this.setupEventListeners();
     this.updatePosition();
@@ -27,7 +38,7 @@ export class ChessBoard {
   private createBoard(): void {
     this.container.innerHTML = `
       <div class="chess-board-container">
-        <div class="chess-board" data-theme="${this.settings.boardTheme}">
+        <div class="chess-board ${this.isFlipped ? 'flipped' : ''}" data-theme="${this.settings.boardTheme}">
           ${this.createSquares()}
         </div>
         ${this.settings.showCoordinates ? this.createCoordinates() : ''}
@@ -79,9 +90,7 @@ export class ChessBoard {
 
   private setupEventListeners(): void {
     this.boardElement.addEventListener('mousedown', this.handleMouseDown.bind(this));
-    this.boardElement.addEventListener('mousemove', this.handleMouseMove.bind(this));
-    this.boardElement.addEventListener('mouseup', this.handleMouseUp.bind(this));
-    this.boardElement.addEventListener('click', this.handleClick.bind(this));
+    // Note: mousemove and mouseup are added dynamically during drag to avoid conflicts
 
     // Touch events for mobile
     this.boardElement.addEventListener('touchstart', this.handleTouchStart.bind(this));
@@ -94,41 +103,93 @@ export class ChessBoard {
 
   private handleMouseDown(event: MouseEvent): void {
     if (event.button !== 0) return; // Only left click
+    
+    // Prevent text selection
+    event.preventDefault();
 
     const square = this.getSquareFromEvent(event);
     if (!square) return;
 
     const piece = this.engine.getPiece(square);
+    
+    // If there's already a drag in progress, ignore new mouse down
+    if (this.draggedPiece) return;
+    
+    // Always handle as selection first, regardless of piece
+    this.handleSquareSelection(square);
+    
+    // Only set up potential drag if there's a piece belonging to current player
     if (piece && piece.color === this.engine.getGameState().currentPlayer) {
-      this.startDrag(square, piece, event);
+      this.dragStartTime = Date.now();
+      this.dragStartPosition = { x: event.clientX, y: event.clientY };
+      this.isDragging = false; // Will be set to true if user actually drags
+      this.draggedPiece = { piece, square };
+      // Add global mouse events for dragging
+      document.addEventListener('mousemove', this.boundMouseMove);
+      document.addEventListener('mouseup', this.boundMouseUp);
     }
   }
 
   private handleMouseMove(event: MouseEvent): void {
-    if (this.draggedPiece) {
+    if (this.draggedPiece && !this.isDragging) {
+      // Check if we've moved enough to consider this a drag
+      const distance = Math.sqrt(
+        Math.pow(event.clientX - this.dragStartPosition.x, 2) +
+        Math.pow(event.clientY - this.dragStartPosition.y, 2)
+      );
+      
+      // Start dragging if moved more than 5 pixels
+      if (distance > 5) {
+        this.isDragging = true;
+      }
+    }
+    
+    if (this.draggedPiece && this.isDragging) {
       this.updateDragPosition(event);
     }
   }
 
   private handleMouseUp(event: MouseEvent): void {
-    if (this.draggedPiece) {
+    // Remove global mouse events first to prevent multiple calls
+    document.removeEventListener('mousemove', this.boundMouseMove);
+    document.removeEventListener('mouseup', this.boundMouseUp);
+    
+    if (this.draggedPiece && this.isDragging) {
+      // Was a real drag - attempt to move to target square
       const targetSquare = this.getSquareFromEvent(event);
       this.endDrag(targetSquare);
+    } else if (this.draggedPiece) {
+      // Was just a click - clean up drag state without doing anything
+      // (selection was already handled in mousedown)
+      this.endDrag(null, true); // preserve selection
     }
+    
+    // Reset drag state
+    this.isDragging = false;
+    this.dragStartTime = 0;
+    this.dragStartPosition = { x: 0, y: 0 };
   }
 
-  private handleClick(event: MouseEvent): void {
-    const square = this.getSquareFromEvent(event);
-    if (!square) return;
-
+  private handleSquareSelection(square: Square): void {
+    const piece = this.engine.getPiece(square);
+    const currentPlayer = this.engine.getGameState().currentPlayer;
+    
     if (this.selectedSquare) {
       if (this.selectedSquare === square) {
+        // Clicking the same square - deselect
         this.clearSelection();
+      } else if (piece && piece.color === currentPlayer) {
+        // Clicking another piece of same color - select it instead
+        this.selectSquare(square);
       } else {
+        // Clicking different square - attempt move
         this.attemptMove(this.selectedSquare, square);
       }
     } else {
-      this.selectSquare(square);
+      // No piece selected - select this square if it has a piece of current player
+      if (piece && piece.color === currentPlayer) {
+        this.selectSquare(square);
+      }
     }
   }
 
@@ -139,8 +200,14 @@ export class ChessBoard {
 
     if (square) {
       const piece = this.engine.getPiece(square);
+      
+      // Always handle as selection first
+      this.handleSquareSelection(square);
+      
+      // Set up drag if it's a draggable piece
       if (piece && piece.color === this.engine.getGameState().currentPlayer) {
-        this.startDrag(square, piece, touch);
+        this.draggedPiece = { piece, square };
+        this.isDragging = true; // Touch is always considered dragging
       }
     }
   }
@@ -174,31 +241,47 @@ export class ChessBoard {
     return squareElement?.dataset.square || null;
   }
 
-  private startDrag(square: Square, piece: Piece, pointer: MouseEvent | Touch): void {
-    this.draggedPiece = { piece, square };
-    this.selectSquare(square);
-
-    // Create dragged piece element
-    const pieceElement = this.createPieceElement(piece);
-    pieceElement.classList.add('dragged-piece');
-    this.container.appendChild(pieceElement);
-
-    this.updateDragPosition(pointer);
-  }
-
   private updateDragPosition(pointer: MouseEvent | Touch): void {
     if (!this.draggedPiece) return;
 
-    const draggedElement = this.container.querySelector('.dragged-piece') as HTMLElement;
-    if (draggedElement) {
-      const rect = this.container.getBoundingClientRect();
-      draggedElement.style.left = `${pointer.clientX - rect.left - 30}px`;
-      draggedElement.style.top = `${pointer.clientY - rect.top - 30}px`;
+    let draggedElement = this.container.querySelector('.dragged-piece') as HTMLElement;
+    
+    // Create drag element if it doesn't exist yet (first drag movement)
+    if (!draggedElement) {
+      // Remove any existing dragged pieces first
+      this.container.querySelectorAll('.dragged-piece').forEach(el => el.remove());
+      
+      const pieceElement = this.createPieceElement(this.draggedPiece.piece);
+      pieceElement.classList.add('dragged-piece');
+      this.container.appendChild(pieceElement);
+      draggedElement = pieceElement;
+      
+      // Completely hide the original piece while dragging
+      const originalSquareElement = this.getSquareElement(this.draggedPiece.square);
+      const originalPieceContainer = originalSquareElement?.querySelector('.piece-container') as HTMLElement;
+      if (originalPieceContainer) {
+        originalPieceContainer.style.display = 'none';
+      }
     }
+
+    const containerRect = this.container.getBoundingClientRect();
+    const squareSize = this.boardElement.getBoundingClientRect().width / 8;
+    const halfSquare = squareSize / 2;
+    
+    // Position relative to the page, but make sure it stays within reasonable bounds
+    draggedElement.style.left = `${pointer.clientX - containerRect.left - halfSquare}px`;
+    draggedElement.style.top = `${pointer.clientY - containerRect.top - halfSquare}px`;
   }
 
-  private endDrag(targetSquare: Square | null): void {
+  private endDrag(targetSquare: Square | null, preserveSelection: boolean = false): void {
     if (!this.draggedPiece) return;
+
+    // Restore display of original piece
+    const originalSquareElement = this.getSquareElement(this.draggedPiece.square);
+    const originalPieceContainer = originalSquareElement?.querySelector('.piece-container') as HTMLElement;
+    if (originalPieceContainer) {
+      originalPieceContainer.style.display = '';
+    }
 
     // Remove dragged piece element
     const draggedElement = this.container.querySelector('.dragged-piece');
@@ -208,7 +291,7 @@ export class ChessBoard {
 
     if (targetSquare && targetSquare !== this.draggedPiece.square) {
       this.attemptMove(this.draggedPiece.square, targetSquare);
-    } else {
+    } else if (!preserveSelection) {
       this.updatePosition();
     }
 
@@ -217,13 +300,15 @@ export class ChessBoard {
 
   private selectSquare(square: Square): void {
     this.clearSelection();
-    this.selectedSquare = square;
-
-    const squareElement = this.getSquareElement(square);
-    squareElement?.classList.add('selected');
-
+    
     const piece = this.engine.getPiece(square);
+    // Only select squares with pieces that belong to the current player
     if (piece && piece.color === this.engine.getGameState().currentPlayer) {
+      this.selectedSquare = square;
+      
+      const squareElement = this.getSquareElement(square);
+      squareElement?.classList.add('selected');
+      
       this.legalMoves = this.engine.getLegalMoves(square);
       this.highlightLegalMoves();
     }
@@ -327,16 +412,92 @@ export class ChessBoard {
     });
   }
 
-  private animateMove(move: Move): void {
+  public animateMove(move: Move): void {
     if (this.settings.animationSpeed === 0) return;
+
+    // Cancel any existing animations first
+    this.cancelAnimations();
 
     const fromElement = this.getSquareElement(move.from);
     const toElement = this.getSquareElement(move.to);
 
     if (!fromElement || !toElement) return;
 
-    // Animation logic would go here
-    // For now, just update immediately
+    // Get the piece that moved
+    const fromContainer = fromElement.querySelector('.piece-container') as HTMLElement;
+    const toContainer = toElement.querySelector('.piece-container') as HTMLElement;
+    
+    if (!fromContainer || !toContainer) return;
+
+    // Create a temporary animated piece
+    const animatedPiece = fromContainer.cloneNode(true) as HTMLElement;
+    animatedPiece.style.position = 'absolute';
+    animatedPiece.style.zIndex = '999';
+    animatedPiece.style.pointerEvents = 'none';
+    animatedPiece.classList.add('animated-piece'); // Add class for easy cleanup
+    
+    // Position it at the starting square
+    const fromRect = fromElement.getBoundingClientRect();
+    const boardRect = this.boardElement.getBoundingClientRect();
+    
+    animatedPiece.style.left = `${fromRect.left - boardRect.left}px`;
+    animatedPiece.style.top = `${fromRect.top - boardRect.top}px`;
+    animatedPiece.style.width = `${fromRect.width}px`;
+    animatedPiece.style.height = `${fromRect.height}px`;
+    
+    this.boardElement.appendChild(animatedPiece);
+    
+    // Hide the original piece temporarily
+    fromContainer.style.opacity = '0';
+    
+    // Animate to the target square
+    const toRect = toElement.getBoundingClientRect();
+    const duration = 300 / this.settings.animationSpeed;
+    
+    animatedPiece.style.transition = `all ${duration}ms ease-in-out`;
+    
+    // Force a reflow to ensure the transition is applied
+    animatedPiece.offsetHeight;
+    
+    animatedPiece.style.left = `${toRect.left - boardRect.left}px`;
+    animatedPiece.style.top = `${toRect.top - boardRect.top}px`;
+    
+    // Clean up after animation
+    this.animationTimeout = setTimeout(() => {
+      if (animatedPiece.parentNode) {
+        animatedPiece.remove();
+      }
+      fromContainer.style.opacity = '';
+      // Ensure the final position is correct
+      this.updatePosition();
+      this.animationTimeout = null;
+    }, duration);
+  }
+
+  public cancelAnimations(): void {
+    // Cancel any pending animation timeout
+    if (this.animationTimeout) {
+      clearTimeout(this.animationTimeout);
+      this.animationTimeout = null;
+    }
+
+    // Remove any animated pieces
+    this.boardElement.querySelectorAll('.animated-piece').forEach(el => el.remove());
+    
+    // Remove any dragged pieces that might still be around
+    this.container.querySelectorAll('.dragged-piece').forEach(el => el.remove());
+    
+    // Restore opacity, visibility, and display of all piece containers
+    this.boardElement.querySelectorAll('.piece-container').forEach(el => {
+      const container = el as HTMLElement;
+      container.style.opacity = '';
+      container.style.visibility = '';
+      container.style.display = '';
+    });
+    
+    // Clean up any drag state
+    this.draggedPiece = null;
+    this.isDragging = false;
   }
 
   public updatePosition(): void {
@@ -360,6 +521,9 @@ export class ChessBoard {
         }
       }
     }
+    
+    // Force a repaint to ensure visual updates are applied
+    this.boardElement.offsetHeight;
   }
 
   private createPieceElement(piece: Piece): HTMLElement {
@@ -368,12 +532,22 @@ export class ChessBoard {
     element.innerHTML = this.getPieceSymbol(piece.type, piece.color);
     element.style.position = 'absolute';
     element.style.pointerEvents = 'none';
-    element.style.width = '60px';
-    element.style.height = '60px';
-    element.style.fontSize = '48px';
-    element.style.textAlign = 'center';
-    element.style.lineHeight = '60px';
+    element.style.userSelect = 'none';
     element.style.zIndex = '1000';
+    
+    // Calculate dynamic size based on board size
+    const rect = this.boardElement.getBoundingClientRect();
+    const squareSize = Math.floor(rect.width / 8);
+    
+    element.style.width = `${squareSize}px`;
+    element.style.height = `${squareSize}px`;
+    element.style.fontSize = `${Math.floor(squareSize * 0.8)}px`;
+    element.style.textAlign = 'center';
+    element.style.lineHeight = `${squareSize}px`;
+    element.style.display = 'flex';
+    element.style.alignItems = 'center';
+    element.style.justifyContent = 'center';
+    
     return element;
   }
 
@@ -396,8 +570,14 @@ export class ChessBoard {
 
   public flipBoard(): void {
     this.isFlipped = !this.isFlipped;
+    
+    // Clear any current selection
+    this.clearSelection();
+    
+    // Toggle the flipped class instead of rebuilding
     this.boardElement.classList.toggle('flipped', this.isFlipped);
-
+    
+    // Update coordinates if they are shown
     if (this.settings.showCoordinates) {
       const coordinatesElement = this.container.querySelector('.coordinates');
       if (coordinatesElement) {

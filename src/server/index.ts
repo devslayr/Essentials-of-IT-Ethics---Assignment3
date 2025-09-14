@@ -2,8 +2,8 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
-import { GameRoom } from './GameRoom.js';
-import { GameManager } from './GameManager.js';
+import { GameRoom } from './GameRoom';
+import { GameManager } from './GameManager';
 
 const app = express();
 const server = createServer(app);

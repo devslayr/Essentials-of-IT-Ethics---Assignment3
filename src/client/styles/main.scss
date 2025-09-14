@@ -203,6 +203,17 @@ body {
   }
 }
 
+// Dragged piece styles
+.dragged-piece {
+  position: absolute !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  z-index: 1000 !important;
+  transform: scale(1.1);
+  filter: drop-shadow(4px 4px 8px rgba(0, 0, 0, 0.6));
+  transition: none !important;
+}
+
 // Board themes
 .chess-board[data-theme="blue"] {
   .chess-square.light {
@@ -461,6 +472,51 @@ body {
     font-size: 1.125rem;
     font-weight: 500;
     margin-bottom: 0.5rem;
+  }
+
+  .game-timers {
+    display: flex;
+    justify-content: space-between;
+    margin: 1rem 0;
+    gap: 1rem;
+
+    .timer {
+      flex: 1;
+      padding: 0.75rem;
+      background-color: var(--bg-tertiary);
+      border: 2px solid var(--border-color);
+      border-radius: 0.5rem;
+      transition: all 0.2s ease;
+
+      &.active {
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.3);
+      }
+
+      .timer-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+      }
+
+      .timer-display {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 700;
+        font-family: 'Courier New', monospace;
+        color: var(--text-primary);
+      }
+    }
+
+    .white-timer .timer-label {
+      color: #f8f9fa;
+    }
+
+    .black-timer .timer-label {
+      color: #6c757d;
+    }
   }
 
   .turn-indicator {
