@@ -5,7 +5,7 @@ import { GamePanel } from './components/GamePanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AppearanceModal } from './components/AppearanceModal';
 import { CapturedPieces } from './components/CapturedPieces';
-import { GameSettings, Move, Square, PieceType } from '../shared/types';
+import { GameSettings, Move, Square, PieceType, Piece } from '../shared/types';
 import './styles/main.scss';
 
 class ChessApp {
@@ -69,6 +69,8 @@ class ChessApp {
                 <button class="control-btn" data-action="flip-board">⟲</button>
                 <button class="control-btn" data-action="new-game">+ New Game</button>
               </div>
+              
+              <div id="captured-pieces-below-board"></div>
             </div>
             
             <div class="right-panel">
@@ -110,17 +112,8 @@ class ChessApp {
         this.board.showGameResult(type, title, description)
     );
 
-        // Initialize captured pieces component
-    const capturedContainer = document.createElement('div');
-    capturedContainer.id = 'captured-pieces';
-    
-    const rightPanel = document.querySelector('.right-panel');
-    if (rightPanel) {
-      rightPanel.appendChild(capturedContainer);
-    } else {
-      // Fallback to game container if right panel doesn't exist
-      document.querySelector('.game-container')!.appendChild(capturedContainer);
-    }
+    // Initialize captured pieces component below chess board
+    const capturedContainer = document.getElementById('captured-pieces-below-board')!;
     this.capturedPieces = new CapturedPieces(capturedContainer, this.settings);
 
     this.settingsModal = new SettingsModal(
@@ -260,12 +253,25 @@ class ChessApp {
   }
 
   private handleMove(move: Move): void {
+    // Ensure notation table is at current position before adding new move
+    if (!this.notationTable.isAtCurrentPosition()) {
+      this.notationTable.syncWithCurrentPosition();
+    }
+    
     // Update notation table
     this.notationTable.addMove(move);
 
     // Update captured pieces if there was a capture
     if (move.capturedPiece) {
       this.capturedPieces.addCapturedPiece(move.capturedPiece);
+    } else if (move.enPassant) {
+      // En passant capture - create the captured pawn piece
+      const capturedPawnColor = move.piece.color === 'white' ? 'black' : 'white';
+      const capturedPawn: Piece = {
+        type: 'pawn',
+        color: capturedPawnColor
+      };
+      this.capturedPieces.addCapturedPiece(capturedPawn);
     }
 
     // Switch timer to next player
@@ -361,6 +367,14 @@ class ChessApp {
       // If the undone move captured a piece, remove it from captured pieces
       if (undoneMove.capturedPiece) {
         this.capturedPieces.removeCapturedPiece(undoneMove.capturedPiece);
+      } else if (undoneMove.enPassant) {
+        // En passant undo - remove the captured pawn
+        const capturedPawnColor = undoneMove.piece.color === 'white' ? 'black' : 'white';
+        const capturedPawn: Piece = {
+          type: 'pawn',
+          color: capturedPawnColor
+        };
+        this.capturedPieces.removeCapturedPiece(capturedPawn);
       }
     }
   }

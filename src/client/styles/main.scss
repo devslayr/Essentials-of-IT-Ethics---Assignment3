@@ -407,6 +407,93 @@ body {
   }
 }
 
+// Captured pieces below chess board
+#captured-pieces-below-board {
+  margin-top: 1.5rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  max-width: 640px; // Match chess board width
+  margin-left: auto;
+  margin-right: auto;
+  
+  .captured-pieces-section {
+    margin: 0;
+  }
+  
+  .captured-pieces-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .captured-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background-color: var(--bg-tertiary);
+    border-radius: 0.375rem;
+    
+    .captured-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      min-width: 80px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      &::before {
+        content: attr(data-color);
+        font-size: 1.5rem;
+      }
+    }
+    
+    .captured-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      align-items: center;
+      flex: 1;
+      justify-content: flex-start;
+      margin: 0 1rem;
+      
+      .captured-piece {
+        font-size: 1.5rem;
+        line-height: 1;
+        opacity: 0.9;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          opacity: 1;
+          transform: scale(1.1);
+        }
+      }
+    }
+    
+    .material-advantage {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--accent-secondary);
+      background: var(--bg-primary);
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      min-width: 40px;
+      text-align: center;
+      
+      &.positive {
+        color: #22c55e;
+      }
+      
+      &.negative {
+        color: #ef4444;
+      }
+    }
+  }
+}
+
 // Right panel
 .right-panel {
   display: flex;

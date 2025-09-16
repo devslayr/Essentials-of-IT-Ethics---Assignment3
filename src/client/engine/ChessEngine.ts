@@ -927,15 +927,14 @@ export class ChessEngine {
     if (moveIndex === -1) {
       // Go to starting position
       this.resetToInitialPosition();
-    } else if (moveIndex < totalMoves - 1) {
-      // Go to a previous position by replaying moves
+    } else {
+      // Always rebuild the position from the beginning to ensure accuracy
       this.resetToInitialPosition();
       for (let i = 0; i <= moveIndex; i++) {
         const move = this.gameState.moves[i];
         this.replayMove(move);
       }
     }
-    // If moveIndex is the current position, no action needed
   }
 
   private resetToInitialPosition(): void {
@@ -955,18 +954,66 @@ export class ChessEngine {
     if (!piece) return;
 
     // Execute the move mechanics without updating moves array
-    this.gameState.board[ChessUtils.squareToIndex(move.to).row][ChessUtils.squareToIndex(move.to).col] = piece;
-    this.gameState.board[ChessUtils.squareToIndex(move.from).row][ChessUtils.squareToIndex(move.from).col] = null;
+    const fromIndex = ChessUtils.squareToIndex(move.from);
+    const toIndex = ChessUtils.squareToIndex(move.to);
+    
+    // Handle castling
+    if (move.castling) {
+      if (move.castling === 'kingside') {
+        // Move king
+        this.gameState.board[fromIndex.row][fromIndex.col] = null;
+        this.gameState.board[toIndex.row][toIndex.col] = piece;
+        // Move rook
+        this.gameState.board[fromIndex.row][7] = null;
+        this.gameState.board[fromIndex.row][5] = { type: 'rook', color: piece.color };
+      } else if (move.castling === 'queenside') {
+        // Move king
+        this.gameState.board[fromIndex.row][fromIndex.col] = null;
+        this.gameState.board[toIndex.row][toIndex.col] = piece;
+        // Move rook
+        this.gameState.board[fromIndex.row][0] = null;
+        this.gameState.board[fromIndex.row][3] = { type: 'rook', color: piece.color };
+      }
+    } else if (move.enPassant) {
+      // Handle en passant
+      this.gameState.board[fromIndex.row][fromIndex.col] = null;
+      this.gameState.board[toIndex.row][toIndex.col] = piece;
+      // Remove captured pawn
+      const capturedPawnRow = piece.color === 'white' ? toIndex.row + 1 : toIndex.row - 1;
+      this.gameState.board[capturedPawnRow][toIndex.col] = null;
+    } else {
+      // Normal move
+      this.gameState.board[fromIndex.row][fromIndex.col] = null;
+      this.gameState.board[toIndex.row][toIndex.col] = piece;
+    }
 
     // Handle promotion
     if (move.promotion) {
-      this.gameState.board[ChessUtils.squareToIndex(move.to).row][ChessUtils.squareToIndex(move.to).col] = {
+      this.gameState.board[toIndex.row][toIndex.col] = {
         type: move.promotion,
         color: piece.color
       };
     }
 
-    // Update player turn
-    this.gameState.currentPlayer = this.gameState.currentPlayer === 'white' ? 'black' : 'white';
+    // Update game state from the move's FEN
+    if (move.fen) {
+      const fenParts = move.fen.split(' ');
+      if (fenParts.length >= 4) {
+        this.gameState.currentPlayer = fenParts[1] as 'white' | 'black';
+        this.gameState.enPassantTarget = fenParts[3] === '-' ? null : fenParts[3];
+        
+        // Update castling rights
+        const castlingRights = fenParts[2];
+        this.gameState.castlingRights = {
+          whiteKingside: castlingRights.includes('K'),
+          whiteQueenside: castlingRights.includes('Q'),
+          blackKingside: castlingRights.includes('k'),
+          blackQueenside: castlingRights.includes('q')
+        };
+      }
+    } else {
+      // Fallback: just switch players
+      this.gameState.currentPlayer = this.gameState.currentPlayer === 'white' ? 'black' : 'white';
+    }
   }
 }
