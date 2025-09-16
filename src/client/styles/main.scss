@@ -131,6 +131,7 @@ body {
   border-radius: 0.5rem;
   overflow: hidden;
   box-shadow: 0 8px 16px var(--shadow);
+  transition: none !important; // Disable transition for immediate flip
 
   &.flipped {
     transform: rotate(180deg);
@@ -148,7 +149,7 @@ body {
   justify-content: center;
   font-size: 3rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease; // Only transition background, not transform
 
   &.light {
     background-color: #f0d9b5;
