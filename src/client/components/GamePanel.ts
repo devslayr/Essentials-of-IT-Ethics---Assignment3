@@ -7,7 +7,7 @@ export class GamePanel {
   private whiteTime: number = 0; // time in seconds
   private blackTime: number = 0;
   private currentPlayer: 'white' | 'black' = 'white';
-  private timerInterval: NodeJS.Timeout | null = null;
+  private timerInterval: ReturnType<typeof setInterval> | null = null;
   private gameMode: 'solo' | 'friend' | 'bot' = 'solo';
   private botDifficulty: number = 10;
   private actionCallback?: (action: string) => void;

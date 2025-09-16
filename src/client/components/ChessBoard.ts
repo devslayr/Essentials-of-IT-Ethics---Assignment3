@@ -18,7 +18,7 @@ export class ChessBoard {
   private isDragging: boolean = false;
   private dragStartTime: number = 0;
   private dragStartPosition: { x: number; y: number } = { x: 0, y: 0 };
-  private animationTimeout: NodeJS.Timeout | null = null;
+  private animationTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(container: HTMLElement, engine: ChessEngine, settings: GameSettings, moveCallback?: (move: Move) => void) {
     this.container = container;
