@@ -99,6 +99,7 @@ body {
   gap: 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  align-items: start; // Ensure all grid items align to top
 }
 
 // Large desktop layout protection (above 1100px)
@@ -107,6 +108,9 @@ body {
     display: grid !important;
     grid-template-columns: 1fr 400px !important;
     gap: 2rem !important;
+    align-items: start !important;
+    margin: 0 auto !important; // Ensure centering
+    max-width: 1400px !important; // Maintain max-width
   }
 }
 
@@ -1525,32 +1529,243 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1.5rem; // Reduced default gap for better cohesion
 }
 
-// Medium screens (1100px to 769px) - Better layout optimization
-@media screen and (max-width: 1100px) and (min-width: 769px) {
+// Base captured pieces spacing - closer to board
+#captured-pieces-below-board {
+  margin-top: 1.5rem; // Reduced default space from chess board
+  margin-bottom: 1rem; // Reduced default space from elements below
+  width: 100%;
+}
+
+// Medium screens (1100px to 915px) - Standard two-column layout
+@media screen and (max-width: 1100px) and (min-width: 916px) {
+  .app-main {
+    flex: 1 !important;
+    padding: 1rem !important;
+    display: block !important;
+    text-align: center !important;
+  }
+
   .game-container {
-    grid-template-columns: 1fr 350px;
-    gap: 1.5rem;
-    max-width: 100%;
-    padding: 0 1rem;
+    display: grid !important;
+    grid-template-columns: 1fr 350px !important;
+    gap: 2rem !important;
+    width: auto !important;
+    max-width: 1000px !important;
+    margin: 0 auto !important;
+    padding: 0 1rem !important;
+    align-items: start !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+    justify-items: center !important; // Center items within their grid columns
+  }
+
+  .left-panel {
+    gap: 1.5rem; // Keep reasonable spacing at this size
+    justify-self: center !important; // Center the left panel in its grid column
+    width: 100%; // Take full width of grid column
+    max-width: 600px; // Reasonable max-width
   }
 
   .chess-board {
-    width: min(60vw, 450px);
-    height: min(60vw, 450px);
-    max-width: 450px;
-    max-height: 450px;
+    width: min(65vw, 480px);
+    height: min(65vw, 480px);
+    max-width: 480px;
+    max-height: 480px;
   }
 
   .right-panel {
     width: 350px;
-    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    justify-self: start !important; // Keep right panel at start of its column
+  }
+
+  #captured-pieces-below-board {
+    margin-top: 1.5rem; // Keep close to board
+    margin-bottom: 1rem;
+  }
+}
+
+// Smaller medium screens (915px to 769px) - Adjusted layout
+@media screen and (max-width: 915px) and (min-width: 769px) {
+  .app-main {
+    flex: 1 !important;
+    padding: 0.75rem !important;
+    display: block !important;
+    text-align: center !important;
+  }
+
+  .game-container {
+    display: grid !important;
+    grid-template-columns: 1fr 300px !important; // Smaller right panel
+    gap: 1.5rem !important; // Smaller gap
+    width: auto !important;
+    max-width: 900px !important; // Smaller max-width
+    margin: 0 auto !important;
+    padding: 0 0.75rem !important; // Less padding
+    align-items: start !important;
+    box-sizing: border-box !important;
+    text-align: left !important;
+    justify-items: center !important; // Center items within their grid columns
+  }
+
+  // Better centering for smaller screens
+  .left-panel {
+    gap: 1.25rem; // Closer spacing between board and captured pieces
+    justify-self: center !important; // Center the left panel in its grid column
+    width: 100%; // Take full width of grid column
+    max-width: 550px; // Reasonable max-width for smaller screens
+  }
+
+  #captured-pieces-below-board {
+    margin-top: 1.25rem; // Closer to board on smaller screens
+    margin-bottom: 0.75rem; // Less space below
+  }
+
+  .chess-board {
+    width: min(60vw, 420px); // Smaller board
+    height: min(60vw, 420px);
+    max-width: 420px;
+    max-height: 420px;
+  }
+
+  .right-panel {
+    width: 300px; // Smaller right panel
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem; // Smaller gaps
+    justify-self: start !important; // Keep right panel at start of its column
   }
 
   .notation-table {
-    max-height: 300px;
+    max-height: 250px; // Smaller height
+    font-size: 0.8rem; // Smaller font
+  }
+
+  .game-panel {
+    .game-actions {
+      .action-group {
+        gap: 0.5rem; // Tighter buttons
+        
+        .action-btn {
+          padding: 0.4rem 0.6rem; // Smaller buttons
+          font-size: 0.8rem;
+        }
+      }
+    }
+    
+    .game-info {
+      font-size: 0.8rem;
+    }
+  }
+
+  .player-info {
+    padding: 0.4rem;
+    
+    .player-name {
+      font-size: 0.75rem;
+    }
+    
+    .player-time {
+      font-size: 1rem;
+    }
+  }
+
+  .captured-pieces {
+    .captured-section {
+      margin-bottom: 0.5rem;
+      
+      .captured-list {
+        .captured-piece {
+          font-size: 0.9rem;
+          width: 1.3rem;
+          height: 1.3rem;
+        }
+      }
+    }
+  }
+}
+
+// Shared styles for both medium screen ranges
+@media screen and (max-width: 1100px) and (min-width: 769px) {
+  .left-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    justify-self: start;
+  }
+
+  // Fix captured pieces spacing
+  #captured-pieces-below-board {
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    width: 100%;
+  }
+
+  .board-controls {
+    margin: 1rem 0;
+  }
+
+  .app-header {
+    padding: 1.5rem;
+    
+    .app-title {
+      font-size: 1.5rem;
+    }
+    
+    .nav-btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// Shared styles for both medium screen ranges  
+@media screen and (max-width: 1100px) and (min-width: 769px) {
+  .left-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem; // Larger gap to separate board from captured pieces
+    justify-self: start; // Align to start of grid column
+  }
+
+  .right-panel {
+    width: 350px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    justify-self: start; // Align to start of grid column
+    align-self: start; // Align to top of grid row
+  }
+
+  .chess-board {
+    width: min(65vw, 480px);
+    height: min(65vw, 480px);
+    max-width: 480px;
+    max-height: 480px;
+  }
+
+  // Fix captured pieces spacing - add significant margin
+  #captured-pieces-below-board {
+    margin-top: 2.5rem; // Large gap from chess board
+    margin-bottom: 1rem; // Space from any elements below
+    width: 100%;
+    max-width: 480px; // Match chess board width
+  }
+
+  .board-controls {
+    margin: 1rem 0; // Space above and below controls
+  }
+
+  // Ensure notation table aligns properly with chess board top
+  .notation-table {
+    max-height: 320px;
     font-size: 0.875rem;
   }
 
@@ -1585,6 +1800,8 @@ body {
 
   .captured-pieces {
     .captured-section {
+      margin-bottom: 0.75rem; // Space between captured sections
+      
       .captured-list {
         .captured-piece {
           font-size: 1rem;
@@ -1593,10 +1810,6 @@ body {
         }
       }
     }
-  }
-
-  .app-main {
-    padding: 1.5rem;
   }
 
   .app-header {
@@ -1623,14 +1836,40 @@ body {
   }
 }
 
-// Mobile Responsive Design - Complete mobile layout
+// Mobile Responsive Design - Complete mobile layout with proper spacing
 @media screen and (max-width: 768px) {
   // Game container - single column layout
   .game-container {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
-    max-width: 100%;
+    gap: 2rem; // Increase gap for better separation
+    max-width: 800px; // Reasonable max-width for mobile
+    margin: 0 auto; // Keep container centered
     padding: 0 1rem;
+  }
+
+  .left-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem; // Reduced gap for mobile - closer spacing
+  }
+
+  // Tighter captured pieces spacing on mobile
+  #captured-pieces-below-board {
+    margin-top: 1.5rem; // Closer to chess board on mobile
+    margin-bottom: 1.25rem; // Less space before right panel content
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .right-panel {
+    width: 100%;
+    max-width: none;
+    margin-top: 0.5rem; // Minimal additional space from captured pieces
+  }
+
+  .board-controls {
+    margin: 1.5rem 0; // More space around controls
   }
 
   // Header adjustments
