@@ -6,7 +6,7 @@ A comprehensive chess game platform built with TypeScript that allows you to pla
 
 ## Features
 
-### Standard Chess Mechanics
+### Core Chess Mechanics
 - **Move Calculation & Validation**: Complete implementation of all chess piece movements
 - **Special Moves**: Castling, En Passant, Pawn Promotion
 - **Game Rules**: Check, Checkmate, Stalemate detection
@@ -14,28 +14,26 @@ A comprehensive chess game platform built with TypeScript that allows you to pla
 - **Notation**: FEN (Forsyth-Edwards Notation) and SAN (Standard Algebraic Notation)
 - **Time Control**: Configurable time limits with increment support
 
-### Extended Features
-- **Pre-moves**: Queue moves for all types including castling, en passant, and promotion
-- **Multiple Pre-moves**: Support for chaining multiple pre-moves
+### Enhanced Gameplay
+- **Move History Navigation**: Navigate through games move by move with full position restoration
 - **Game Offers**: Abort, Resign, Draw, Undo, and Rematch functionality
-- **Move History Navigation**: Step through games move by move
 - **Sound Effects**: Audio feedback for moves and game events
-- **Animations**: Smooth piece movement animations
+- **Move Animations**: Smooth piece movement animations with configurable speed
+- **Undo/Redo**: Full move history navigation with position restoration
 
 ### Game Modes
 - **Solo Play**: Practice against yourself or analyze positions
 - **Friend Mode**: Play against friends on the same device or online
-- **Bot Play**: Challenge the Stockfish engine with 20 difficulty levels
+- **Bot Play**: Challenge AI opponent with 20 difficulty levels
 - **Online Multiplayer**: Real-time games with lobby system
 
 ### User Interface
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Multiple Themes**: Light, Dark, and System theme support
+- **Multiple Themes**: Light, Dark, and System theme support with real-time detection
 - **Board Customization**: 6 different board themes and piece sets
-- **Notation Table**: Complete move history with navigation
-- **Board Editor**: Create and edit custom positions
+- **Notation Table**: Complete move history with click navigation
 - **Settings Panel**: Comprehensive configuration options
-- **Log Console**: Detailed game event logging
+- **Game Log**: Real-time game event logging
 
 ## Technology Stack
 
@@ -123,7 +121,7 @@ chess/
 ### Playing against Bot
 1. Select "Play against Bot" mode
 2. Choose difficulty level (1-20, where 20 is strongest)
-3. The Stockfish engine will respond to your moves
+3. The AI opponent will respond to your moves
 
 ### Customization
 - Access **Settings** for gameplay preferences
@@ -141,12 +139,11 @@ chess/
 - Check and checkmate detection
 - Stalemate and draw conditions
 
-### Extended Mechanics
-- **Pre-moves**: Plan your next move while opponent is thinking
+### Enhanced Mechanics
 - **Undo System**: Request move takebacks in casual games
 - **Time Controls**: Blitz, Rapid, Classical, or custom time limits
-- **Move Navigation**: Review games move by move
-- **Export/Import**: PGN format support for game analysis
+- **Move Navigation**: Review games move by move with arrow keys
+- **Game Analysis**: Analyze completed games with full history
 
 ### Multiplayer Features
 - Real-time synchronization via WebSockets
@@ -166,7 +163,7 @@ chess/
 
 ### Display Options
 - Board themes: Brown, Blue, Green, Purple, Red, Gray
-- Piece sets: Classic, Modern, Medieval, Minimalist
+- Piece sets: Classic, Modern, Medieval
 - Coordinate display toggle
 - Legal move highlighting
 - Animation speed control
@@ -233,17 +230,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - Chess piece symbols from Unicode standard
-- Stockfish engine for bot functionality
+- Custom AI engine implementation for bot functionality
 - Socket.IO for real-time communication
 - TypeScript for type safety and developer experience
 
 ## Roadmap
 
-- [ ] Chess engine analysis integration
+- [ ] Enhanced AI difficulty and strategy improvements
 - [ ] Tournament mode with brackets
 - [ ] Advanced statistics and game analysis
 - [ ] Mobile app development
-- [ ] AI training data collection
+- [ ] PGN import/export functionality
 - [ ] Puzzle solving mode
 - [ ] Opening book integration
 
