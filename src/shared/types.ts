@@ -84,7 +84,7 @@ export interface GameInfo {
     white: Player;
     black: Player;
   };
-  gameMode: 'solo' | 'friend' | 'bot' | 'online';
+  gameMode: 'friend' | 'bot' | 'online';
   status: 'waiting' | 'active' | 'paused' | 'finished';
   result?: 'white-wins' | 'black-wins' | 'draw';
   startTime: number;

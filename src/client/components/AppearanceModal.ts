@@ -110,14 +110,6 @@ export class AppearanceModal {
           white: '♔♕🏭⛪🛡️🔰',
           black: '♚♛🏰🕌⚔️⚫'
         }
-      },
-      { 
-        name: 'minimalist', 
-        label: 'Minimalist', 
-        preview: {
-          white: '▲◆■●▶▪',
-          black: '▼◇□○◀▫'
-        }
       }
     ];
 
@@ -189,10 +181,6 @@ export class AppearanceModal {
       medieval: {
         'K': '♔', 'Q': '♕', 'R': '🏭', 'B': '⛪', 'N': '🛡️', 'P': '🔰',
         'k': '♚', 'q': '♛', 'r': '🏰', 'b': '🕌', 'n': '⚔️', 'p': '⚫'
-      },
-      minimalist: {
-        'K': '▲', 'Q': '◆', 'R': '■', 'B': '●', 'N': '▶', 'P': '▪',
-        'k': '▼', 'q': '◇', 'r': '□', 'b': '○', 'n': '◀', 'p': '▫'
       }
     };
 
@@ -298,7 +286,7 @@ export class AppearanceModal {
     const boardPreview = this.container.querySelector('.mini-board');
     if (boardPreview) {
       // Remove old piece set classes
-      boardPreview.classList.remove('piece-classic', 'piece-modern', 'piece-medieval', 'piece-minimalist');
+      boardPreview.classList.remove('piece-classic', 'piece-modern', 'piece-medieval');
       // Add current piece set class
       boardPreview.classList.add(`piece-${this.settings.pieceSet}`);
     }

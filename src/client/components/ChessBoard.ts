@@ -106,6 +106,12 @@ export class ChessBoard {
   private handleMouseDown(event: MouseEvent): void {
     if (event.button !== 0) return; // Only left click
     
+    // Check if game is paused
+    const gameContainer = document.querySelector('.game-container');
+    if (gameContainer?.classList.contains('game-paused')) {
+      return; // Don't allow interaction while paused
+    }
+    
     // Prevent text selection
     event.preventDefault();
 
@@ -443,15 +449,24 @@ export class ChessBoard {
   }
 
   private attemptMove(from: Square, to: Square): void {
+    // Check if game is paused
+    const gameContainer = document.querySelector('.game-container');
+    if (gameContainer?.classList.contains('game-paused')) {
+      return; // Don't allow moves while paused
+    }
+    
     // Check if it's a promotion move
     const piece = this.engine.getPiece(from);
     if (piece?.type === 'pawn') {
       const toRank = ChessUtils.squareToPosition(to).rank;
       const promotionRank = piece.color === 'white' ? 8 : 1;
 
-      if (toRank === promotionRank && this.engine.isValidMove(from, to)) {
-        this.showPromotionDialog(from, to);
-        return;
+      if (toRank === promotionRank) {
+        // Check if any promotion move is valid (queen promotion as test)
+        if (this.engine.isValidMove(from, to, 'queen')) {
+          this.showPromotionDialog(from, to);
+          return;
+        }
       }
     }
 
@@ -623,8 +638,100 @@ export class ChessBoard {
       }
     }
     
+    // Check for game ending states and trigger appropriate feedback
+    this.checkGameEndingStates(gameState);
+    
     // Force a repaint to ensure visual updates are applied
     this.boardElement.offsetHeight;
+  }
+
+  private checkGameEndingStates(gameState: any): void {
+    // Handle stalemate with board shake
+    if (gameState.isStalemate && !this.boardElement.classList.contains('shake')) {
+      this.triggerBoardShake();
+      setTimeout(() => {
+        this.showGameResultModal('draw', 'Stalemate', 'No legal moves available');
+      }, 800); // Show modal after shake animation
+    }
+    
+    // Handle checkmate
+    else if (gameState.isCheckmate) {
+      const winner = gameState.currentPlayer === 'white' ? 'black' : 'white';
+      const winnerText = winner === 'white' ? 'White' : 'Black';
+      this.showGameResultModal(
+        winner === 'white' ? 'victory' : 'defeat', 
+        `${winnerText} Wins!`, 
+        'By Checkmate'
+      );
+    }
+    
+    // Handle other draws
+    else if (gameState.isDraw && !gameState.isStalemate) {
+      this.showGameResultModal('draw', 'Draw', 'Game ended in a draw');
+    }
+  }
+
+  // Public method to handle timeout from external timer
+  public handleTimeout(playerColor: PieceColor): void {
+    const winner = playerColor === 'white' ? 'black' : 'white';
+    const winnerText = winner === 'white' ? 'White' : 'Black';
+    const loserText = playerColor === 'white' ? 'White' : 'Black';
+    
+    this.showGameResultModal(
+      winner === 'white' ? 'victory' : 'defeat',
+      `${winnerText} Wins!`,
+      `${loserText} ran out of time`
+    );
+  }
+
+  // Public method to show game result modals from external sources
+  public showGameResult(type: 'victory' | 'defeat' | 'draw', title: string, description: string): void {
+    this.showGameResultModal(type, title, description);
+  }
+
+  private triggerBoardShake(): void {
+    this.boardElement.classList.add('shake');
+    setTimeout(() => {
+      this.boardElement.classList.remove('shake');
+    }, 600); // Duration matches CSS animation
+  }
+
+  private showGameResultModal(type: 'victory' | 'defeat' | 'draw', title: string, description: string): void {
+    // Remove any existing modal
+    const existingModal = document.querySelector('.game-result-modal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'game-result-modal';
+    
+    const iconMap = {
+      victory: '👑',
+      defeat: '💀', 
+      draw: '🤝'
+    };
+
+    modal.innerHTML = `
+      <div class="game-result-content">
+        <div class="result-icon ${type}">${iconMap[type]}</div>
+        <div class="result-title ${type}">${title}</div>
+        <div class="result-description">${description}</div>
+        <div class="result-actions">
+          <button class="btn btn-primary" onclick="this.closest('.game-result-modal').remove(); window.location.reload();">New Game</button>
+          <button class="btn btn-secondary" onclick="this.closest('.game-result-modal').remove();">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Add click outside to close
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
   }
 
   private createPieceElement(piece: Piece): HTMLElement {
@@ -679,14 +786,6 @@ export class ChessBoard {
         bishop: { white: '⛪', black: '🕌' },
         knight: { white: '🛡️', black: '⚔️' },
         pawn: { white: '🔰', black: '⚫' }
-      },
-      minimalist: {
-        king: { white: '▲', black: '▼' },
-        queen: { white: '◆', black: '◇' },
-        rook: { white: '■', black: '□' },
-        bishop: { white: '●', black: '○' },
-        knight: { white: '▶', black: '◀' },
-        pawn: { white: '▪', black: '▫' }
       }
     };
 
@@ -738,7 +837,7 @@ export class ChessBoard {
     this.boardElement.setAttribute('data-theme', settings.boardTheme);
     
     // Update piece set class
-    this.boardElement.classList.remove('piece-classic', 'piece-modern', 'piece-medieval', 'piece-minimalist');
+    this.boardElement.classList.remove('piece-classic', 'piece-modern', 'piece-medieval');
     this.boardElement.classList.add(`piece-${settings.pieceSet}`);
     
     // Re-render pieces to apply new piece set

@@ -104,7 +104,10 @@ class ChessApp {
     this.gamePanel = new GamePanel(
       document.getElementById('game-panel')!,
       this.engine,
-      (action: string) => this.handleAction(action)
+      (action: string) => this.handleAction(action),
+      (playerColor: 'white' | 'black') => this.board.handleTimeout(playerColor),
+      (type: 'victory' | 'defeat' | 'draw', title: string, description: string) => 
+        this.board.showGameResult(type, title, description)
     );
 
         // Initialize captured pieces component

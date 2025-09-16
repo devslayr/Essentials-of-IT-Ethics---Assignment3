@@ -321,14 +321,6 @@ body {
   text-shadow: 1px 1px 0px rgba(139, 69, 19, 0.3);
 }
 
-.chess-board.piece-minimalist .piece,
-.mini-board.piece-minimalist .piece {
-  font-family: 'Helvetica', 'Arial', sans-serif;
-  font-size: 2.8rem;
-  font-weight: 300;
-  filter: drop-shadow(0px 0px 1px rgba(0, 0, 0, 0.8));
-}
-
 // Special styling for modern set emojis
 .chess-board.piece-modern .piece,
 .mini-board.piece-modern .piece {
@@ -336,6 +328,21 @@ body {
   font-size: 2rem;
   filter: none;
   transform: none;
+}
+
+// Enhanced sizing for appearance modal preview
+.appearance-modal {
+  .mini-board.piece-classic .piece {
+    font-size: 2rem;
+  }
+
+  .mini-board.piece-modern .piece {
+    font-size: 1.8rem;
+  }
+
+  .mini-board.piece-medieval .piece {
+    font-size: 1.9rem;
+  }
 }
 
 // Coordinates
@@ -1090,11 +1097,24 @@ body {
   overflow: hidden;
   margin: 0 auto;
 
+  // Larger size for appearance modal preview
+  .appearance-modal & {
+    width: 320px;
+    height: 320px;
+    border: 2px solid var(--border-color);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
   .preview-square {
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 0.75rem;
+
+    // Larger font size for appearance modal
+    .appearance-modal & {
+      font-size: 1.2rem;
+    }
 
     &.light {
       background-color: #f0d9b5;
@@ -1202,6 +1222,44 @@ body {
 // Utility classes
 .hidden {
   display: none !important;
+}
+
+// Game pause state
+.game-paused {
+  .chess-board {
+    filter: grayscale(50%) brightness(0.8);
+    pointer-events: none;
+  }
+
+  .timer {
+    opacity: 0.6;
+    
+    .timer-display {
+      color: var(--warning);
+      animation: pausedPulse 2s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes pausedPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.pause-resume-btn {
+  &[data-action="pause"] {
+    .btn-icon {
+      filter: hue-rotate(0deg);
+    }
+  }
+  
+  &.paused {
+    background-color: var(--warning);
+    
+    .btn-icon {
+      filter: hue-rotate(120deg);
+    }
+  }
 }
 
 // Responsive design
@@ -1567,5 +1625,138 @@ body {
     .piece {
       font-size: min(5vw, 1.75rem);
     }
+  }
+}
+
+// Game state animations and notifications
+@keyframes boardShake {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-3px) rotate(-0.5deg); }
+  20% { transform: translateX(3px) rotate(0.5deg); }
+  30% { transform: translateX(-3px) rotate(-0.5deg); }
+  40% { transform: translateX(3px) rotate(0.5deg); }
+  50% { transform: translateX(-2px) rotate(-0.3deg); }
+  60% { transform: translateX(2px) rotate(0.3deg); }
+  70% { transform: translateX(-2px) rotate(-0.3deg); }
+  80% { transform: translateX(2px) rotate(0.3deg); }
+  90% { transform: translateX(-1px) rotate(-0.1deg); }
+}
+
+.chess-board.shake {
+  animation: boardShake 0.6s ease-in-out;
+}
+
+// Game result notification modal
+.game-result-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(5px);
+
+  .game-result-content {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    border: 2px solid var(--accent-primary);
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+    width: 90%;
+    animation: modalSlideIn 0.3s ease-out;
+
+    .result-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      
+      &.victory {
+        color: var(--success);
+      }
+      
+      &.defeat {
+        color: var(--danger);
+      }
+      
+      &.draw {
+        color: var(--warning);
+      }
+    }
+
+    .result-title {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      
+      &.victory {
+        color: var(--success);
+      }
+      
+      &.defeat {
+        color: var(--danger);
+      }
+      
+      &.draw {
+        color: var(--warning);
+      }
+    }
+
+    .result-description {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &.btn-primary {
+          background-color: var(--accent-primary);
+          color: white;
+
+          &:hover {
+            background-color: #3a8cef;
+            transform: translateY(-1px);
+          }
+        }
+
+        &.btn-secondary {
+          background-color: var(--bg-tertiary);
+          color: var(--text-primary);
+          border: 1px solid var(--border-color);
+
+          &:hover {
+            background-color: var(--bg-secondary);
+            transform: translateY(-1px);
+          }
+        }
+      }
+    }
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }

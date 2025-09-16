@@ -8,14 +8,25 @@ export class GamePanel {
   private blackTime: number = 0;
   private currentPlayer: 'white' | 'black' = 'white';
   private timerInterval: ReturnType<typeof setInterval> | null = null;
-  private gameMode: 'solo' | 'friend' | 'bot' = 'solo';
+  private gameMode: 'friend' | 'bot' = 'friend';
   private botDifficulty: number = 10;
   private actionCallback?: (action: string) => void;
+  private timeoutCallback?: (playerColor: 'white' | 'black') => void;
+  private gameOverCallback?: (type: 'victory' | 'defeat' | 'draw', title: string, description: string) => void;
+  private isPaused: boolean = false;
 
-  constructor(container: HTMLElement, engine: ChessEngine, actionCallback?: (action: string) => void) {
+  constructor(
+    container: HTMLElement, 
+    engine: ChessEngine, 
+    actionCallback?: (action: string) => void,
+    timeoutCallback?: (playerColor: 'white' | 'black') => void,
+    gameOverCallback?: (type: 'victory' | 'defeat' | 'draw', title: string, description: string) => void
+  ) {
     this.container = container;
     this.engine = engine;
     this.actionCallback = actionCallback;
+    this.timeoutCallback = timeoutCallback;
+    this.gameOverCallback = gameOverCallback;
     this.createPanel();
   }
 
@@ -59,9 +70,9 @@ export class GamePanel {
               <span class="btn-icon">↶</span>
               <span class="btn-text">Undo</span>
             </button>
-            <button class="action-btn" data-action="abort" title="Abort Game">
-              <span class="btn-icon">⏹️</span>
-              <span class="btn-text">Abort</span>
+            <button class="action-btn pause-resume-btn" data-action="pause" title="Pause Game">
+              <span class="btn-icon">⏸️</span>
+              <span class="btn-text">Pause</span>
             </button>
           </div>
         </div>
@@ -70,7 +81,6 @@ export class GamePanel {
           <div class="feature-group">
             <h4>Game Mode</h4>
             <select class="game-mode-select">
-              <option value="solo">Play by Yourself</option>
               <option value="friend">Play against Friend</option>
               <option value="bot">Play against Bot</option>
             </select>
@@ -177,14 +187,14 @@ export class GamePanel {
           this.undoMove();
         }
         break;
-      case 'abort':
-        this.abortGame();
+      case 'pause':
+        this.togglePause();
         break;
     }
   }
 
   private handleGameModeChange(mode: string): void {
-    this.gameMode = mode as 'solo' | 'friend' | 'bot';
+    this.gameMode = mode as 'friend' | 'bot';
     const botSettings = this.container.querySelector('.bot-settings');
 
     if (mode === 'bot') {
@@ -257,6 +267,11 @@ export class GamePanel {
     }
 
     this.timerInterval = setInterval(() => {
+      // Don't decrement time if game is paused
+      if (this.isPaused) {
+        return;
+      }
+      
       if (this.currentPlayer === 'white' && this.whiteTime > 0) {
         this.whiteTime--;
       } else if (this.currentPlayer === 'black' && this.blackTime > 0) {
@@ -307,13 +322,21 @@ export class GamePanel {
 
   private handleTimeExpired(): void {
     this.stopTimer();
+    const winnerColor = this.whiteTime <= 0 ? 'black' : 'white';
+    const loserColor = this.whiteTime <= 0 ? 'white' : 'black';
     const winner = this.whiteTime <= 0 ? 'Black' : 'White';
+    
     this.addLogEntry(`Time expired! ${winner} wins!`);
     
     // Update status
     const statusText = this.container.querySelector('.status-text');
     if (statusText) {
       statusText.textContent = `${winner} wins on time!`;
+    }
+
+    // Notify ChessBoard about the timeout
+    if (this.timeoutCallback) {
+      this.timeoutCallback(loserColor);
     }
   }
 
@@ -347,9 +370,19 @@ export class GamePanel {
       const gameState = this.engine.getGameState();
       const currentPlayer = gameState.currentPlayer;
       const winner = currentPlayer === 'white' ? 'black' : 'white';
+      const winnerText = winner === 'white' ? 'White' : 'Black';
 
       this.addLogEntry(`${currentPlayer} resigned. ${winner} wins!`);
       this.showGameOver(winner === 'white' ? 'white-wins' : 'black-wins');
+
+      // Trigger visual notification via callback
+      if (this.gameOverCallback) {
+        this.gameOverCallback(
+          winner === 'white' ? 'victory' : 'defeat',
+          `${winnerText} Wins!`,
+          'By Resignation'
+        );
+      }
     }
   }
 
@@ -363,10 +396,34 @@ export class GamePanel {
     }
   }
 
-  private abortGame(): void {
-    if (confirm('Are you sure you want to abort the game?')) {
-      this.addLogEntry('Game aborted');
-      // TODO: Implement game abort logic
+  private togglePause(): void {
+    const pauseBtn = this.container.querySelector('.pause-resume-btn');
+    const btnIcon = pauseBtn?.querySelector('.btn-icon');
+    const btnText = pauseBtn?.querySelector('.btn-text');
+    const gameContainer = document.querySelector('.game-container');
+    
+    if (this.isPaused) {
+      // Resume game
+      this.isPaused = false;
+      this.startTimer();
+      if (btnIcon) btnIcon.textContent = '⏸️';
+      if (btnText) btnText.textContent = 'Pause';
+      (pauseBtn as HTMLElement)?.setAttribute('data-action', 'pause');
+      (pauseBtn as HTMLElement)?.setAttribute('title', 'Pause Game');
+      pauseBtn?.classList.remove('paused');
+      gameContainer?.classList.remove('game-paused');
+      this.addLogEntry('Game resumed');
+    } else {
+      // Pause game  
+      this.isPaused = true;
+      this.stopTimer();
+      if (btnIcon) btnIcon.textContent = '▶️';
+      if (btnText) btnText.textContent = 'Resume';
+      (pauseBtn as HTMLElement)?.setAttribute('data-action', 'pause');
+      (pauseBtn as HTMLElement)?.setAttribute('title', 'Resume Game');
+      pauseBtn?.classList.add('paused');
+      gameContainer?.classList.add('game-paused');
+      this.addLogEntry('Game paused');
     }
   }
 
@@ -475,7 +532,7 @@ export class GamePanel {
 
   public getSelectedGameMode(): string {
     const gameModeSelect = this.container.querySelector('.game-mode-select') as HTMLSelectElement;
-    return gameModeSelect?.value || 'solo';
+    return gameModeSelect?.value || 'friend';
   }
 
   public getSelectedDifficulty(): number {
@@ -508,11 +565,15 @@ export class GamePanel {
     }
   }
 
-  public getGameMode(): 'solo' | 'friend' | 'bot' {
+  public getGameMode(): 'friend' | 'bot' {
     return this.gameMode;
   }
 
   public getBotDifficulty(): number {
     return this.botDifficulty;
+  }
+
+  public isPausedState(): boolean {
+    return this.isPaused;
   }
 }
