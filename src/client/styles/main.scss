@@ -99,10 +99,14 @@ body {
   gap: 2rem;
   max-width: 1400px;
   margin: 0 auto;
-  
-  &.game-container {
+}
+
+// Large desktop layout protection (above 1100px)
+@media screen and (min-width: 1101px) {
+  .game-container {
     display: grid !important;
     grid-template-columns: 1fr 400px !important;
+    gap: 2rem !important;
   }
 }
 
@@ -1388,29 +1392,6 @@ body {
   50% { transform: scale(1.05); }
 }
 
-// Responsive design
-@media (max-width: 1024px) {
-  .game-container {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-
-  .chess-board {
-    width: 100%;
-    max-width: 480px;
-    height: auto;
-    aspect-ratio: 1;
-  }
-
-  .app-header {
-    padding: 1rem;
-  }
-
-  .app-main {
-    padding: 1rem;
-  }
-}
-
 @media (max-width: 768px) {
   .app-header {
     .app-nav {
@@ -1547,7 +1528,92 @@ body {
   gap: 0.5rem;
 }
 
-// Medium screens (tablets/small laptops) - Board size optimization
+// Medium screens (1100px to 769px) - Better layout optimization
+@media screen and (max-width: 1100px) and (min-width: 769px) {
+  .game-container {
+    grid-template-columns: 1fr 350px;
+    gap: 1.5rem;
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+
+  .chess-board {
+    width: min(60vw, 450px);
+    height: min(60vw, 450px);
+    max-width: 450px;
+    max-height: 450px;
+  }
+
+  .right-panel {
+    width: 350px;
+    min-width: 300px;
+  }
+
+  .notation-table {
+    max-height: 300px;
+    font-size: 0.875rem;
+  }
+
+  .game-panel {
+    .game-actions {
+      .action-group {
+        gap: 0.75rem;
+        
+        .action-btn {
+          padding: 0.5rem 0.75rem;
+          font-size: 0.875rem;
+        }
+      }
+    }
+    
+    .game-info {
+      font-size: 0.875rem;
+    }
+  }
+
+  .player-info {
+    padding: 0.5rem;
+    
+    .player-name {
+      font-size: 0.8rem;
+    }
+    
+    .player-time {
+      font-size: 1.1rem;
+    }
+  }
+
+  .captured-pieces {
+    .captured-section {
+      .captured-list {
+        .captured-piece {
+          font-size: 1rem;
+          width: 1.5rem;
+          height: 1.5rem;
+        }
+      }
+    }
+  }
+
+  .app-main {
+    padding: 1.5rem;
+  }
+
+  .app-header {
+    padding: 1.5rem;
+    
+    .app-title {
+      font-size: 1.5rem;
+    }
+    
+    .nav-btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// Medium screens (tablets/small laptops) - Board size optimization only
 @media screen and (max-width: 1024px) and (min-width: 769px) {
   .chess-board {
     width: min(75vw, 500px);
@@ -1555,14 +1621,18 @@ body {
     max-width: 500px;
     max-height: 500px;
   }
-  
-  .game-container {
-    gap: 1.5rem;
-  }
 }
 
-// Mobile Responsive Design
+// Mobile Responsive Design - Complete mobile layout
 @media screen and (max-width: 768px) {
+  // Game container - single column layout
+  .game-container {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+
   // Header adjustments
   .app-header {
     padding: 1rem;
@@ -1587,12 +1657,6 @@ body {
   // Main container adjustments
   .app-main {
     padding: 1rem;
-  }
-
-  .game-container {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-    max-width: 100%;
   }
 
   // Chess board mobile optimization
