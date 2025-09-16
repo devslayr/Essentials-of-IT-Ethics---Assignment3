@@ -57,6 +57,8 @@ export class AppearanceModal {
     `;
 
     this.setupEventListeners();
+    // Initialize preview properly
+    this.updatePieceSetClasses();
   }
 
   private createBoardThemes(): string {
@@ -85,17 +87,50 @@ export class AppearanceModal {
 
   private createPieceSets(): string {
     const pieceSets = [
-      { name: 'classic', label: 'Classic', preview: '♔♛♜♝♞♟' },
-      { name: 'modern', label: 'Modern', preview: '♔♛♜♝♞♟' },
-      { name: 'medieval', label: 'Medieval', preview: '♔♛♜♝♞♟' },
-      { name: 'minimalist', label: 'Minimalist', preview: '♔♛♜♝♞♟' }
+      { 
+        name: 'classic', 
+        label: 'Classic', 
+        preview: {
+          white: '♔♕♖♗♘♙',
+          black: '♚♛♜♝♞♟'
+        }
+      },
+      { 
+        name: 'modern', 
+        label: 'Modern', 
+        preview: {
+          white: '🤴👸🏰⛪🐎⚪',
+          black: '👑💂‍♀️🏯🕌🏇⚫'
+        }
+      },
+      { 
+        name: 'medieval', 
+        label: 'Medieval', 
+        preview: {
+          white: '♔♕🏭⛪🛡️🔰',
+          black: '♚♛🏰🕌⚔️⚫'
+        }
+      },
+      { 
+        name: 'minimalist', 
+        label: 'Minimalist', 
+        preview: {
+          white: '▲◆■●▶▪',
+          black: '▼◇□○◀▫'
+        }
+      }
     ];
 
     return pieceSets.map(set => `
       <div class="piece-option ${this.settings.pieceSet === set.name ? 'selected' : ''}" 
            data-piece-set="${set.name}">
         <div class="piece-preview">
-          <span class="piece-sample">${set.preview}</span>
+          <div class="piece-sample-row">
+            <span class="piece-sample white-pieces">${set.preview.white}</span>
+          </div>
+          <div class="piece-sample-row">
+            <span class="piece-sample black-pieces">${set.preview.black}</span>
+          </div>
         </div>
         <span class="piece-label">${set.label}</span>
       </div>
@@ -104,7 +139,7 @@ export class AppearanceModal {
 
   private createBoardPreview(): string {
     return `
-      <div class="mini-board" data-theme="${this.settings.boardTheme}">
+      <div class="mini-board piece-${this.settings.pieceSet}" data-theme="${this.settings.boardTheme}">
         ${this.createPreviewSquares()}
       </div>
     `;
@@ -140,12 +175,29 @@ export class AppearanceModal {
   }
 
   private getPieceSymbol(piece: string): string {
-    const symbols: { [key: string]: string } = {
-      'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
-      'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+    const pieceSet = this.settings.pieceSet || 'classic';
+    
+    const pieceSets: { [key: string]: { [key: string]: string } } = {
+      classic: {
+        'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+        'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+      },
+      modern: {
+        'K': '🤴', 'Q': '👸', 'R': '🏰', 'B': '⛪', 'N': '🐎', 'P': '⚪',
+        'k': '👑', 'q': '💂‍♀️', 'r': '🏯', 'b': '🕌', 'n': '🏇', 'p': '⚫'
+      },
+      medieval: {
+        'K': '♔', 'Q': '♕', 'R': '🏭', 'B': '⛪', 'N': '🛡️', 'P': '🔰',
+        'k': '♚', 'q': '♛', 'r': '🏰', 'b': '🕌', 'n': '⚔️', 'p': '⚫'
+      },
+      minimalist: {
+        'K': '▲', 'Q': '◆', 'R': '■', 'B': '●', 'N': '▶', 'P': '▪',
+        'k': '▼', 'q': '◇', 'r': '□', 'b': '○', 'n': '◀', 'p': '▫'
+      }
     };
 
-    return `<span class="piece piece-${this.settings.pieceSet}">${symbols[piece] || ''}</span>`;
+    const symbols = pieceSets[pieceSet] || pieceSets.classic;
+    return `<span class="piece piece-${pieceSet}">${symbols[piece] || ''}</span>`;
   }
 
   private setupEventListeners(): void {
@@ -236,6 +288,19 @@ export class AppearanceModal {
     const preview = this.container.querySelector('.board-preview');
     if (preview) {
       preview.innerHTML = this.createBoardPreview();
+    }
+    
+    // Also update piece set classes if needed
+    this.updatePieceSetClasses();
+  }
+
+  private updatePieceSetClasses(): void {
+    const boardPreview = this.container.querySelector('.mini-board');
+    if (boardPreview) {
+      // Remove old piece set classes
+      boardPreview.classList.remove('piece-classic', 'piece-modern', 'piece-medieval', 'piece-minimalist');
+      // Add current piece set class
+      boardPreview.classList.add(`piece-${this.settings.pieceSet}`);
     }
   }
 

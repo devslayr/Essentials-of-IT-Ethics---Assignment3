@@ -10,6 +10,7 @@ export class ChessBoard {
   private isFlipped: boolean = false;
   private selectedSquare: Square | null = null;
   private draggedPiece: { piece: Piece; square: Square } | null = null;
+  private draggedElement: HTMLElement | null = null;
   private legalMoves: Array<{ to: Square, promotion?: string }> = [];
   private promotionCallback: ((pieceType: string) => void) | null = null;
   private moveCallback?: (move: Move) => void;
@@ -18,6 +19,7 @@ export class ChessBoard {
   private isDragging: boolean = false;
   private dragStartTime: number = 0;
   private dragStartPosition: { x: number; y: number } = { x: 0, y: 0 };
+  private touchStartPosition: { x: number; y: number; time: number } | null = null;
   private animationTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(container: HTMLElement, engine: ChessEngine, settings: GameSettings, moveCallback?: (move: Move) => void) {
@@ -195,11 +197,22 @@ export class ChessBoard {
 
   private handleTouchStart(event: TouchEvent): void {
     event.preventDefault();
+    
+    // Prevent zoom on double-tap
+    if (event.touches.length > 1) return;
+    
     const touch = event.touches[0];
     const square = this.getSquareFromTouch(touch);
 
     if (square) {
       const piece = this.engine.getPiece(square);
+      
+      // Store touch start position for drag threshold
+      this.touchStartPosition = {
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now()
+      };
       
       // Always handle as selection first
       this.handleSquareSelection(square);
@@ -207,26 +220,52 @@ export class ChessBoard {
       // Set up drag if it's a draggable piece
       if (piece && piece.color === this.engine.getGameState().currentPlayer) {
         this.draggedPiece = { piece, square };
-        this.isDragging = true; // Touch is always considered dragging
+        this.isDragging = false; // Will become true when drag threshold is met
       }
     }
   }
 
   private handleTouchMove(event: TouchEvent): void {
     event.preventDefault();
-    if (this.draggedPiece) {
-      const touch = event.touches[0];
+    
+    if (!this.draggedPiece || event.touches.length > 1) return;
+    
+    const touch = event.touches[0];
+    
+    // Check if we should start dragging (threshold check)
+    if (!this.isDragging && this.touchStartPosition) {
+      const deltaX = Math.abs(touch.clientX - this.touchStartPosition.x);
+      const deltaY = Math.abs(touch.clientY - this.touchStartPosition.y);
+      const dragThreshold = 15; // pixels
+      
+      if (deltaX > dragThreshold || deltaY > dragThreshold) {
+        this.isDragging = true;
+      }
+    }
+    
+    if (this.isDragging) {
       this.updateDragPosition(touch);
     }
   }
 
   private handleTouchEnd(event: TouchEvent): void {
     event.preventDefault();
+    
     if (this.draggedPiece) {
       const touch = event.changedTouches[0];
-      const targetSquare = this.getSquareFromTouch(touch);
-      this.endDrag(targetSquare);
+      
+      // If we were dragging, attempt move to target square
+      if (this.isDragging) {
+        const targetSquare = this.getSquareFromTouch(touch);
+        this.endDrag(targetSquare);
+      } else {
+        // Just a tap - selection was already handled in touchStart
+        this.endDrag(null, true);
+      }
     }
+    
+    // Reset touch tracking
+    this.touchStartPosition = null;
   }
 
   private getSquareFromEvent(event: MouseEvent): Square | null {
@@ -244,49 +283,110 @@ export class ChessBoard {
   private updateDragPosition(pointer: MouseEvent | Touch): void {
     if (!this.draggedPiece) return;
 
-    let draggedElement = this.container.querySelector('.dragged-piece') as HTMLElement;
-    
     // Create drag element if it doesn't exist yet (first drag movement)
-    if (!draggedElement) {
-      // Remove any existing dragged pieces first
+    if (!this.draggedElement) {
+      // Remove any existing dragged pieces first to prevent duplicates
+      document.body.querySelectorAll('.dragged-piece').forEach(el => el.remove());
       this.container.querySelectorAll('.dragged-piece').forEach(el => el.remove());
       
-      const pieceElement = this.createPieceElement(this.draggedPiece.piece);
-      pieceElement.classList.add('dragged-piece');
-      this.container.appendChild(pieceElement);
-      draggedElement = pieceElement;
+      // Create a simple drag element
+      this.draggedElement = document.createElement('div');
+      this.draggedElement.className = 'dragged-piece';
+      this.draggedElement.innerHTML = this.getPieceSymbol(this.draggedPiece.piece.type, this.draggedPiece.piece.color);
+      
+      // Set up the dragged piece with minimal, explicit positioning
+      this.draggedElement.style.position = 'fixed';
+      this.draggedElement.style.zIndex = '9999';
+      this.draggedElement.style.pointerEvents = 'none';
+      this.draggedElement.style.userSelect = 'none';
+      this.draggedElement.style.fontSize = '3rem';
+      this.draggedElement.style.lineHeight = '1';
+      this.draggedElement.style.color = this.draggedPiece.piece.color === 'white' ? '#ffffff' : '#1a1a1a';
+      this.draggedElement.style.textShadow = this.draggedPiece.piece.color === 'white' 
+        ? '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000'
+        : '1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff';
+      this.draggedElement.style.filter = 'drop-shadow(3px 3px 8px rgba(0, 0, 0, 0.5))';
+      this.draggedElement.style.transform = 'scale(1.1)';
+      this.draggedElement.style.width = '48px';
+      this.draggedElement.style.height = '48px';
+      this.draggedElement.style.display = 'flex';
+      this.draggedElement.style.alignItems = 'center';
+      this.draggedElement.style.justifyContent = 'center';
+      
+      // Prevent browser drag behavior
+      this.draggedElement.setAttribute('draggable', 'false');
+      (this.draggedElement.style as any).webkitUserDrag = 'none';
+      
+      // Add to document body
+      document.body.appendChild(this.draggedElement);
       
       // Completely hide the original piece while dragging
       const originalSquareElement = this.getSquareElement(this.draggedPiece.square);
-      const originalPieceContainer = originalSquareElement?.querySelector('.piece-container') as HTMLElement;
-      if (originalPieceContainer) {
-        originalPieceContainer.style.display = 'none';
+      if (originalSquareElement) {
+        // Hide the piece container
+        const originalPieceContainer = originalSquareElement.querySelector('.piece-container') as HTMLElement;
+        if (originalPieceContainer) {
+          originalPieceContainer.style.visibility = 'hidden';
+          originalPieceContainer.style.opacity = '0';
+        }
+        
+        // Also hide any direct piece elements
+        const pieceElements = originalSquareElement.querySelectorAll('.piece, .piece-element');
+        pieceElements.forEach(el => {
+          const element = el as HTMLElement;
+          element.style.visibility = 'hidden';
+          element.style.opacity = '0';
+        });
+        
+        // Store reference for cleanup
+        originalSquareElement.setAttribute('data-dragging', 'true');
       }
     }
 
-    const containerRect = this.container.getBoundingClientRect();
-    const squareSize = this.boardElement.getBoundingClientRect().width / 8;
-    const halfSquare = squareSize / 2;
+    // Position relative to viewport (since we're using position: fixed)
+    const x = pointer.clientX - 24; // Offset to center under cursor
+    const y = pointer.clientY - 24;
     
-    // Position relative to the page, but make sure it stays within reasonable bounds
-    draggedElement.style.left = `${pointer.clientX - containerRect.left - halfSquare}px`;
-    draggedElement.style.top = `${pointer.clientY - containerRect.top - halfSquare}px`;
+    // Direct positioning without transform conflicts
+    this.draggedElement.style.left = `${x}px`;
+    this.draggedElement.style.top = `${y}px`;
   }
 
   private endDrag(targetSquare: Square | null, preserveSelection: boolean = false): void {
     if (!this.draggedPiece) return;
 
-    // Restore display of original piece
-    const originalSquareElement = this.getSquareElement(this.draggedPiece.square);
-    const originalPieceContainer = originalSquareElement?.querySelector('.piece-container') as HTMLElement;
-    if (originalPieceContainer) {
-      originalPieceContainer.style.display = '';
+    // Clean up drag state - remove the dragged element
+    if (this.draggedElement) {
+      this.draggedElement.remove();
+      this.draggedElement = null;
     }
+    
+    // Also clean up any orphaned dragged pieces
+    document.body.querySelectorAll('.dragged-piece').forEach(el => el.remove());
+    this.container.querySelectorAll('.dragged-piece').forEach(el => el.remove());
 
-    // Remove dragged piece element
-    const draggedElement = this.container.querySelector('.dragged-piece');
-    if (draggedElement) {
-      draggedElement.remove();
+    // Restore visibility of original piece
+    const originalSquareElement = this.getSquareElement(this.draggedPiece.square);
+    if (originalSquareElement) {
+      // Restore piece container visibility
+      const originalPieceContainer = originalSquareElement.querySelector('.piece-container') as HTMLElement;
+      if (originalPieceContainer) {
+        originalPieceContainer.style.visibility = '';
+        originalPieceContainer.style.opacity = '';
+        originalPieceContainer.style.display = '';
+      }
+      
+      // Restore all piece elements
+      const pieceElements = originalSquareElement.querySelectorAll('.piece, .piece-element');
+      pieceElements.forEach(el => {
+        const element = el as HTMLElement;
+        element.style.visibility = '';
+        element.style.opacity = '';
+        element.style.display = '';
+      });
+      
+      // Remove dragging marker
+      originalSquareElement.removeAttribute('data-dragging');
     }
 
     if (targetSquare && targetSquare !== this.draggedPiece.square) {
@@ -296,6 +396,7 @@ export class ChessBoard {
     }
 
     this.draggedPiece = null;
+    this.isDragging = false;
   }
 
   private selectSquare(square: Square): void {
@@ -552,15 +653,44 @@ export class ChessBoard {
   }
 
   private getPieceSymbol(type: string, color: PieceColor): string {
-    const symbols: { [key: string]: { white: string; black: string } } = {
-      king: { white: '♔', black: '♚' },
-      queen: { white: '♕', black: '♛' },
-      rook: { white: '♖', black: '♜' },
-      bishop: { white: '♗', black: '♝' },
-      knight: { white: '♘', black: '♞' },
-      pawn: { white: '♙', black: '♟' }
+    const pieceSet = this.settings.pieceSet || 'classic';
+    
+    const pieceSets: { [key: string]: { [key: string]: { white: string; black: string } } } = {
+      classic: {
+        king: { white: '♔', black: '♚' },
+        queen: { white: '♕', black: '♛' },
+        rook: { white: '♖', black: '♜' },
+        bishop: { white: '♗', black: '♝' },
+        knight: { white: '♘', black: '♞' },
+        pawn: { white: '♙', black: '♟' }
+      },
+      modern: {
+        king: { white: '🤴', black: '👑' },
+        queen: { white: '👸', black: '💂‍♀️' },
+        rook: { white: '🏰', black: '🏯' },
+        bishop: { white: '⛪', black: '🕌' },
+        knight: { white: '🐎', black: '🏇' },
+        pawn: { white: '⚪', black: '⚫' }
+      },
+      medieval: {
+        king: { white: '♔', black: '♚' },
+        queen: { white: '♕', black: '♛' },
+        rook: { white: '🏭', black: '🏰' },
+        bishop: { white: '⛪', black: '🕌' },
+        knight: { white: '🛡️', black: '⚔️' },
+        pawn: { white: '🔰', black: '⚫' }
+      },
+      minimalist: {
+        king: { white: '▲', black: '▼' },
+        queen: { white: '◆', black: '◇' },
+        rook: { white: '■', black: '□' },
+        bishop: { white: '●', black: '○' },
+        knight: { white: '▶', black: '◀' },
+        pawn: { white: '▪', black: '▫' }
+      }
     };
 
+    const symbols = pieceSets[pieceSet] || pieceSets.classic;
     return symbols[type]?.[color] || '';
   }
 
@@ -606,6 +736,13 @@ export class ChessBoard {
   public updateAppearance(settings: GameSettings): void {
     this.settings = settings;
     this.boardElement.setAttribute('data-theme', settings.boardTheme);
+    
+    // Update piece set class
+    this.boardElement.classList.remove('piece-classic', 'piece-modern', 'piece-medieval', 'piece-minimalist');
+    this.boardElement.classList.add(`piece-${settings.pieceSet}`);
+    
+    // Re-render pieces to apply new piece set
+    this.updatePosition();
   }
 
   public reset(engine: ChessEngine): void {

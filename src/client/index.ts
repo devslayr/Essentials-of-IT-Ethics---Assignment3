@@ -63,19 +63,7 @@ class ChessApp {
         <main class="app-main">
           <div class="game-container">
             <div class="left-panel">
-              <div class="player-info black-player">
-                <div class="player-name">Black Player</div>
-                <div class="player-time">∞</div>
-                <div id="black-captured" class="captured-pieces-section"></div>
-              </div>
-              
               <div id="chess-board"></div>
-              
-              <div class="player-info white-player">
-                <div class="player-name">White Player</div>
-                <div class="player-time">∞</div>
-                <div id="white-captured" class="captured-pieces-section"></div>
-              </div>
               
               <div class="board-controls">
                 <button class="control-btn" data-action="flip-board">⟲</button>
@@ -119,19 +107,18 @@ class ChessApp {
       (action: string) => this.handleAction(action)
     );
 
-    // Initialize captured pieces display
-    // Create a single container that will manage both white and black captured pieces
+        // Initialize captured pieces component
     const capturedContainer = document.createElement('div');
-    capturedContainer.className = 'captured-pieces-container';
-    // Use the right panel or create a dedicated section for captured pieces
+    capturedContainer.id = 'captured-pieces';
+    
     const rightPanel = document.querySelector('.right-panel');
     if (rightPanel) {
       rightPanel.appendChild(capturedContainer);
     } else {
-      // Fallback to white-captured if right panel doesn't exist
-      document.getElementById('white-captured')!.appendChild(capturedContainer);
+      // Fallback to game container if right panel doesn't exist
+      document.querySelector('.game-container')!.appendChild(capturedContainer);
     }
-    this.capturedPieces = new CapturedPieces(capturedContainer);
+    this.capturedPieces = new CapturedPieces(capturedContainer, this.settings);
 
     this.settingsModal = new SettingsModal(
       document.getElementById('settings-modal')!,
@@ -262,6 +249,7 @@ class ChessApp {
 
   private applyAppearance(): void {
     this.board.updateAppearance(this.settings);
+    this.capturedPieces.updateSettings(this.settings);
     this.applyTheme();
   }
 

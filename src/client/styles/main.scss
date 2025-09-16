@@ -203,18 +203,49 @@ body {
   }
 }
 
-// Dragged piece styles
+// Dragged piece styles - simplified for fixed positioning
 .dragged-piece {
-  position: absolute !important;
+  position: fixed !important;
   pointer-events: none !important;
   user-select: none !important;
-  z-index: 1000 !important;
-  transform: scale(1.1);
-  filter: drop-shadow(4px 4px 8px rgba(0, 0, 0, 0.6));
+  z-index: 9999 !important;
   transition: none !important;
+  
+  // Prevent browser default drag image
+  -webkit-user-drag: none !important;
+  -khtml-user-drag: none !important;
+  -moz-user-drag: none !important;
+  -o-user-drag: none !important;
+  
+  // Remove any text selection
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+// Hide original piece during drag
+.chess-square[data-dragging="true"] {
+  .piece-container,
+  .piece,
+  .piece-element {
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
 }
 
 // Board themes
+.chess-board[data-theme="brown"] {
+  .chess-square.light {
+    background-color: #f0d9b5;
+  }
+
+  .chess-square.dark {
+    background-color: #b58863;
+  }
+}
+
 .chess-board[data-theme="blue"] {
   .chess-square.light {
     background-color: #dee3e6;
@@ -263,6 +294,48 @@ body {
   .chess-square.dark {
     background-color: #696969;
   }
+}
+
+// Piece set styles
+.chess-board.piece-classic .piece,
+.mini-board.piece-classic .piece {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 2.5rem;
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.chess-board.piece-modern .piece,
+.mini-board.piece-modern .piece {
+  font-family: 'Arial', sans-serif;
+  font-size: 2.2rem;
+  filter: drop-shadow(1px 1px 3px rgba(0, 0, 0, 0.4));
+  transform: scale(1.1);
+}
+
+.chess-board.piece-medieval .piece,
+.mini-board.piece-medieval .piece {
+  font-family: 'Times New Roman', serif;
+  font-size: 2.4rem;
+  font-weight: bold;
+  filter: drop-shadow(2px 2px 3px rgba(139, 69, 19, 0.5));
+  text-shadow: 1px 1px 0px rgba(139, 69, 19, 0.3);
+}
+
+.chess-board.piece-minimalist .piece,
+.mini-board.piece-minimalist .piece {
+  font-family: 'Helvetica', 'Arial', sans-serif;
+  font-size: 2.8rem;
+  font-weight: 300;
+  filter: drop-shadow(0px 0px 1px rgba(0, 0, 0, 0.8));
+}
+
+// Special styling for modern set emojis
+.chess-board.piece-modern .piece,
+.mini-board.piece-modern .piece {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  font-size: 2rem;
+  filter: none;
+  transform: none;
 }
 
 // Coordinates
@@ -963,8 +1036,39 @@ body {
   }
 
   .piece-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    
+    .piece-sample-row {
+      display: flex;
+      justify-content: center;
+    }
+    
     .piece-sample {
-      font-size: 1.5rem;
+      font-size: 1.4rem;
+      line-height: 1.2;
+      letter-spacing: 0.1rem;
+      
+      &.white-pieces {
+        color: #ffffff;
+        text-shadow: 
+          1px 1px 0 #000000,
+          -1px -1px 0 #000000,
+          1px -1px 0 #000000,
+          -1px 1px 0 #000000,
+          2px 2px 3px rgba(0, 0, 0, 0.8);
+      }
+      
+      &.black-pieces {
+        color: #2c2c2c;
+        text-shadow: 
+          1px 1px 0 #ffffff,
+          -1px -1px 0 #ffffff,
+          1px -1px 0 #ffffff,
+          -1px 1px 0 #ffffff,
+          1px 1px 2px rgba(255, 255, 255, 0.7);
+      }
     }
   }
 
@@ -998,6 +1102,61 @@ body {
 
     &.dark {
       background-color: #b58863;
+    }
+  }
+
+  // Theme-specific colors for mini-board
+  &[data-theme="brown"] {
+    .preview-square.light {
+      background-color: #f0d9b5;
+    }
+    .preview-square.dark {
+      background-color: #b58863;
+    }
+  }
+
+  &[data-theme="blue"] {
+    .preview-square.light {
+      background-color: #dee3e6;
+    }
+    .preview-square.dark {
+      background-color: #8ca2ad;
+    }
+  }
+
+  &[data-theme="green"] {
+    .preview-square.light {
+      background-color: #ffffdd;
+    }
+    .preview-square.dark {
+      background-color: #86a666;
+    }
+  }
+
+  &[data-theme="purple"] {
+    .preview-square.light {
+      background-color: #e6e6fa;
+    }
+    .preview-square.dark {
+      background-color: #9370db;
+    }
+  }
+
+  &[data-theme="red"] {
+    .preview-square.light {
+      background-color: #ffd1dc;
+    }
+    .preview-square.dark {
+      background-color: #cd5c5c;
+    }
+  }
+
+  &[data-theme="gray"] {
+    .preview-square.light {
+      background-color: #f5f5f5;
+    }
+    .preview-square.dark {
+      background-color: #696969;
     }
   }
 }
@@ -1202,4 +1361,211 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
+}
+
+// Medium screens (tablets/small laptops) - Board size optimization
+@media screen and (max-width: 1024px) and (min-width: 769px) {
+  .chess-board {
+    width: min(75vw, 500px);
+    height: min(75vw, 500px);
+    max-width: 500px;
+    max-height: 500px;
+  }
+  
+  .game-container {
+    gap: 1.5rem;
+  }
+}
+
+// Mobile Responsive Design
+@media screen and (max-width: 768px) {
+  // Header adjustments
+  .app-header {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+    
+    .app-title {
+      font-size: 1.25rem;
+    }
+    
+    .app-nav {
+      flex-wrap: wrap;
+      justify-content: center;
+      
+      .nav-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+      }
+    }
+  }
+
+  // Main container adjustments
+  .app-main {
+    padding: 1rem;
+  }
+
+  .game-container {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    max-width: 100%;
+  }
+
+  // Chess board mobile optimization
+  .chess-board-container {
+    width: 100%;
+    max-width: 100vw;
+    padding: 0 1rem;
+  }
+
+  .chess-board {
+    width: min(95vw, 500px);
+    height: min(95vw, 500px);
+    max-width: 500px;
+    max-height: 500px;
+    margin: 0 auto;
+  }
+
+  // Pieces scaling for mobile
+  .chess-square {
+    font-size: min(6vw, 2.5rem);
+    
+    .piece {
+      font-size: min(6vw, 2.5rem);
+    }
+  }
+
+  // Game panel mobile layout
+  .game-panel {
+    width: 100%;
+    max-width: none;
+    order: -1; // Move game panel above board on mobile
+  }
+
+  // Settings and appearance modals
+  .modal {
+    width: 95vw;
+    max-width: 400px;
+    margin: 0 auto;
+    
+    .modal-content {
+      padding: 1.5rem;
+    }
+  }
+
+  // Notation table mobile optimization
+  .notation-table {
+    max-height: 200px;
+    
+    .notation-entry {
+      padding: 0.5rem;
+      font-size: 0.875rem;
+    }
+  }
+
+  // Captured pieces mobile layout
+  .captured-pieces {
+    .captured-section {
+      .captured-list {
+        gap: 0.25rem;
+        
+        .captured-piece {
+          font-size: 1.25rem;
+          width: 1.75rem;
+          height: 1.75rem;
+        }
+      }
+    }
+  }
+
+  // Touch-friendly buttons
+  .btn, .nav-btn, .game-btn {
+    min-height: 44px; // iOS touch target size
+    min-width: 44px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+
+  // Dragged piece mobile optimization
+  .dragged-piece {
+    font-size: min(7vw, 3rem);
+    filter: drop-shadow(1px 1px 4px rgba(0, 0, 0, 0.6));
+    
+    // Enhanced touch feedback
+    opacity: 0.9;
+    transform-origin: center;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  // Extra small mobile devices
+  .app-header {
+    padding: 0.75rem;
+    
+    .app-title {
+      font-size: 1.125rem;
+    }
+  }
+
+  .app-main {
+    padding: 0.75rem;
+  }
+
+  .chess-board {
+    width: min(90vw, 450px);
+    height: min(90vw, 450px);
+    max-width: 450px;
+    max-height: 450px;
+  }
+
+  .chess-square {
+    font-size: min(5.5vw, 2rem);
+    
+    .piece {
+      font-size: min(5.5vw, 2rem);
+    }
+  }
+
+  .modal {
+    width: 98vw;
+    
+    .modal-content {
+      padding: 1rem;
+    }
+  }
+
+  .notation-table {
+    max-height: 150px;
+  }
+
+  // Smaller captured pieces for tiny screens
+  .captured-pieces {
+    .captured-section {
+      .captured-list {
+        .captured-piece {
+          font-size: 1rem;
+          width: 1.5rem;
+          height: 1.5rem;
+        }
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 360px) {
+  // Very small devices
+  .chess-board {
+    width: min(95vw, 380px);
+    height: min(95vw, 380px);
+    max-width: 380px;
+    max-height: 380px;
+  }
+
+  .chess-square {
+    font-size: min(5vw, 1.75rem);
+    
+    .piece {
+      font-size: min(5vw, 1.75rem);
+    }
+  }
 }

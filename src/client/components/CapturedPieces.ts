@@ -1,12 +1,14 @@
-import { Piece, PieceColor } from '../../shared/types';
+import { Piece, PieceColor, GameSettings } from '../../shared/types';
 
 export class CapturedPieces {
     private container: HTMLElement;
     private capturedWhite: Piece[] = [];
     private capturedBlack: Piece[] = [];
+    private settings: GameSettings;
 
-    constructor(container: HTMLElement) {
+    constructor(container: HTMLElement, settings: GameSettings) {
         this.container = container;
+        this.settings = settings;
         this.createDisplay();
     }
 
@@ -104,16 +106,50 @@ export class CapturedPieces {
     }
 
     private getPieceSymbol(type: string, color: PieceColor): string {
-        const pieces: Record<string, Record<PieceColor, string>> = {
+        const pieceSet = this.settings.pieceSet || 'classic';
+        
+        const pieceSets: { [key: string]: { [key: string]: { white: string; black: string } } } = {
+          classic: {
             king: { white: '♔', black: '♚' },
             queen: { white: '♕', black: '♛' },
             rook: { white: '♖', black: '♜' },
             bishop: { white: '♗', black: '♝' },
             knight: { white: '♘', black: '♞' },
             pawn: { white: '♙', black: '♟' }
+          },
+          modern: {
+            king: { white: '🤴', black: '👑' },
+            queen: { white: '👸', black: '💂‍♀️' },
+            rook: { white: '🏰', black: '🏯' },
+            bishop: { white: '⛪', black: '🕌' },
+            knight: { white: '🐎', black: '🏇' },
+            pawn: { white: '⚪', black: '⚫' }
+          },
+          medieval: {
+            king: { white: '♔', black: '♚' },
+            queen: { white: '♕', black: '♛' },
+            rook: { white: '🏭', black: '🏰' },
+            bishop: { white: '⛪', black: '🕌' },
+            knight: { white: '🛡️', black: '⚔️' },
+            pawn: { white: '🔰', black: '⚫' }
+          },
+          minimalist: {
+            king: { white: '▲', black: '▼' },
+            queen: { white: '◆', black: '◇' },
+            rook: { white: '■', black: '□' },
+            bishop: { white: '●', black: '○' },
+            knight: { white: '▶', black: '◀' },
+            pawn: { white: '▪', black: '▫' }
+          }
         };
 
-        return pieces[type]?.[color] || '';
+        const symbols = pieceSets[pieceSet] || pieceSets.classic;
+        return symbols[type]?.[color] || '';
+    }
+
+    public updateSettings(settings: GameSettings): void {
+        this.settings = settings;
+        this.updateDisplay();
     }
 
     public reset(): void {
