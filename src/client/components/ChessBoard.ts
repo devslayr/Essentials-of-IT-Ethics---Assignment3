@@ -14,6 +14,7 @@ export class ChessBoard {
   private legalMoves: Array<{ to: Square, promotion?: string }> = [];
   private promotionCallback: ((pieceType: string) => void) | null = null;
   private moveCallback?: (move: Move) => void;
+  private onGameEnd?: (type: 'checkmate' | 'stalemate' | 'draw') => void;
   private boundMouseMove: (event: MouseEvent) => void;
   private boundMouseUp: (event: MouseEvent) => void;
   private isDragging: boolean = false;
@@ -22,11 +23,18 @@ export class ChessBoard {
   private touchStartPosition: { x: number; y: number; time: number } | null = null;
   private animationTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(container: HTMLElement, engine: ChessEngine, settings: GameSettings, moveCallback?: (move: Move) => void) {
+  constructor(
+    container: HTMLElement, 
+    engine: ChessEngine, 
+    settings: GameSettings, 
+    moveCallback?: (move: Move) => void,
+    onGameEnd?: (type: 'checkmate' | 'stalemate' | 'draw') => void
+  ) {
     this.container = container;
     this.engine = engine;
     this.settings = settings;
     this.moveCallback = moveCallback;
+    this.onGameEnd = onGameEnd;
     
     // Bind event handlers to avoid memory leaks
     this.boundMouseMove = this.handleMouseMove.bind(this);
@@ -649,6 +657,10 @@ export class ChessBoard {
     // Handle stalemate with board shake
     if (gameState.isStalemate && !this.boardElement.classList.contains('shake')) {
       this.triggerBoardShake();
+      // Play stalemate sound
+      if (this.onGameEnd) {
+        this.onGameEnd('stalemate');
+      }
       setTimeout(() => {
         this.showGameResultModal('draw', 'Stalemate', 'No legal moves available');
       }, 800); // Show modal after shake animation
@@ -656,6 +668,10 @@ export class ChessBoard {
     
     // Handle checkmate
     else if (gameState.isCheckmate) {
+      // Play checkmate sound
+      if (this.onGameEnd) {
+        this.onGameEnd('checkmate');
+      }
       const winner = gameState.currentPlayer === 'white' ? 'black' : 'white';
       const winnerText = winner === 'white' ? 'White' : 'Black';
       this.showGameResultModal(
@@ -667,12 +683,21 @@ export class ChessBoard {
     
     // Handle other draws
     else if (gameState.isDraw && !gameState.isStalemate) {
+      // Play draw sound
+      if (this.onGameEnd) {
+        this.onGameEnd('draw');
+      }
       this.showGameResultModal('draw', 'Draw', 'Game ended in a draw');
     }
   }
 
   // Public method to handle timeout from external timer
   public handleTimeout(playerColor: PieceColor): void {
+    // Play checkmate sound for timeout (similar ending)
+    if (this.onGameEnd) {
+      this.onGameEnd('checkmate');
+    }
+    
     const winner = playerColor === 'white' ? 'black' : 'white';
     const winnerText = winner === 'white' ? 'White' : 'Black';
     const loserText = playerColor === 'white' ? 'White' : 'Black';

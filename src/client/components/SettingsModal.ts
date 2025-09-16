@@ -31,14 +31,6 @@ export class SettingsModal {
               
               <div class="setting-item">
                 <label class="setting-label">
-                  <input type="checkbox" class="setting-checkbox" data-setting="allowPreMoves" ${this.settings.allowPreMoves ? 'checked' : ''}>
-                  <span class="setting-text">Allow Pre-moves</span>
-                </label>
-                <p class="setting-description">Enable making moves before it's your turn</p>
-              </div>
-              
-              <div class="setting-item">
-                <label class="setting-label">
                   <input type="checkbox" class="setting-checkbox" data-setting="highlightLegalMoves" ${this.settings.highlightLegalMoves ? 'checked' : ''}>
                   <span class="setting-text">Highlight Legal Moves</span>
                 </label>
@@ -111,14 +103,6 @@ export class SettingsModal {
                 </button>
                 <p class="setting-description">Download your settings as a file</p>
               </div>
-              
-              <div class="setting-item">
-                <button class="setting-button" data-action="import-settings">
-                  Import Settings
-                </button>
-                <input type="file" class="hidden" accept=".json" data-action="import-file">
-                <p class="setting-description">Load settings from a file</p>
-              </div>
             </div>
           </div>
           
@@ -183,9 +167,6 @@ export class SettingsModal {
       case 'export-settings':
         this.exportSettings();
         break;
-      case 'import-settings':
-        this.importSettings();
-        break;
     }
   }
 
@@ -211,7 +192,6 @@ export class SettingsModal {
   private resetSettings(): void {
     if (confirm('Are you sure you want to reset all settings to default values?')) {
       const defaultSettings: GameSettings = {
-        allowPreMoves: true,
         showCoordinates: true,
         highlightLegalMoves: true,
         animationSpeed: 1,
@@ -236,40 +216,6 @@ export class SettingsModal {
     link.click();
 
     URL.revokeObjectURL(link.href);
-  }
-
-  private importSettings(): void {
-    const fileInput = this.container.querySelector('[data-action="import-file"]') as HTMLInputElement;
-    fileInput.click();
-
-    fileInput.onchange = (event) => {
-      const file = (event.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const importedSettings = JSON.parse(e.target?.result as string);
-
-          // Validate imported settings
-          if (this.validateSettings(importedSettings)) {
-            this.settings = { ...this.settings, ...importedSettings };
-            this.updateModal();
-            alert('Settings imported successfully!');
-          } else {
-            alert('Invalid settings file format.');
-          }
-        } catch (error) {
-          alert('Error reading settings file.');
-        }
-      };
-      reader.readAsText(file);
-    };
-  }
-
-  private validateSettings(settings: any): boolean {
-    const requiredKeys = ['allowPreMoves', 'showCoordinates', 'highlightLegalMoves', 'animationSpeed', 'soundEffects', 'theme'];
-    return requiredKeys.every(key => key in settings);
   }
 
   private updateModal(): void {

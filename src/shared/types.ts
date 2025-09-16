@@ -27,12 +27,6 @@ export interface Move {
   timestamp: number;
 }
 
-export interface PreMove {
-  from: Square;
-  to: Square;
-  promotion?: PieceType;
-}
-
 export interface GameState {
   board: (Piece | null)[][];
   currentPlayer: PieceColor;
@@ -58,7 +52,6 @@ export interface GameSettings {
     initialTime: number; // in seconds
     increment: number; // in seconds
   };
-  allowPreMoves: boolean;
   showCoordinates: boolean;
   highlightLegalMoves: boolean;
   animationSpeed: number;

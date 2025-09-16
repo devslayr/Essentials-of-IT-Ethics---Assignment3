@@ -17,14 +17,357 @@
 }
 
 [data-theme="light"] {
-  --bg-primary: #f8f9fa;
+  --bg-primary: #fafbfc;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #e9ecef;
-  --text-primary: #212529;
-  --text-secondary: #495057;
-  --text-muted: #6c757d;
-  --border-color: #dee2e6;
-  --shadow: rgba(0, 0, 0, 0.1);
+  --bg-tertiary: #f1f3f4;
+  --text-primary: #1a1a1a;
+  --text-secondary: #5f6368;
+  --text-muted: #9aa0a6;
+  --border-color: #e8eaed;
+  --shadow: rgba(60, 64, 67, 0.15);
+  --accent-primary: #1a73e8;
+  --accent-secondary: #34a853;
+  --success: #137333;
+  --warning: #ea8600;
+  --danger: #d93025;
+  --info: #1967d2;
+  --hover-overlay: rgba(60, 64, 67, 0.08);
+  --active-overlay: rgba(60, 64, 67, 0.12);
+  --focus-ring: rgba(26, 115, 232, 0.2);
+
+  // Enhanced light theme specific styles
+  .app-header {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-bottom: 1px solid #e8eaed;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.12), 0 1px 2px rgba(60, 64, 67, 0.24);
+  }
+
+  .app-title {
+    &:hover {
+      background-color: rgba(60, 64, 67, 0.08);
+    }
+  }
+
+  .nav-btn {
+    background: #ffffff;
+    border: 1px solid #e8eaed;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.1);
+    font-weight: 500;
+
+    &:hover {
+      background: #f8f9fa;
+      border-color: #dadce0;
+      box-shadow: 0 1px 3px rgba(60, 64, 67, 0.12), 0 1px 2px rgba(60, 64, 67, 0.24);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      background: #f1f3f4;
+      transform: translateY(0);
+      box-shadow: 0 1px 2px rgba(60, 64, 67, 0.1);
+    }
+  }
+
+  // Enhanced panels and cards
+  .game-panel,
+  .modal-content,
+  .chess-board {
+    background: #ffffff;
+    border: 1px solid #e8eaed;
+    box-shadow: 0 2px 4px rgba(60, 64, 67, 0.1), 0 1px 6px rgba(60, 64, 67, 0.05);
+  }
+
+  // Enhanced form elements
+  input, select, textarea {
+    background: #ffffff;
+    border: 1px solid #dadce0;
+    transition: all 0.2s ease;
+
+    &:focus {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+      outline: none;
+    }
+
+    &:hover {
+      border-color: #bdc1c6;
+    }
+  }
+
+  // Enhanced text readability
+  .status-text {
+    color: #202124;
+    font-weight: 500;
+  }
+
+  .text-muted {
+    color: #5f6368;
+  }
+
+  // Better scrollbars for light theme
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f3f4;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #bdc1c6;
+    border-radius: 4px;
+    
+    &:hover {
+      background: #9aa0a6;
+    }
+  }
+
+  // Enhanced chess board for light theme
+  .chess-square {
+    &.light {
+      background-color: #f5f5dc; // Light beige - warmer and more elegant
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    &.dark {
+      background-color: #8fbc8f; // Soft sage green - easier on eyes
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    &.selected {
+      box-shadow: inset 0 0 0 3px #1a73e8, 0 0 8px rgba(26, 115, 232, 0.3);
+    }
+
+    &.legal-move::after {
+      background-color: rgba(26, 115, 232, 0.4);
+      box-shadow: 0 0 4px rgba(26, 115, 232, 0.2);
+    }
+
+    &.legal-capture::after {
+      border: 3px solid rgba(26, 115, 232, 0.6);
+      background-color: rgba(26, 115, 232, 0.1);
+    }
+
+    &:hover {
+      filter: brightness(1.05);
+      transition: filter 0.1s ease;
+    }
+  }
+
+  // Enhanced game status and info
+  .game-status {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid #e8eaed;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.1);
+  }
+
+  // Better modal appearance
+  .modal-backdrop {
+    background: rgba(60, 64, 67, 0.4);
+    backdrop-filter: blur(4px);
+  }
+
+  // Enhanced action buttons
+  .action-btn {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid #e8eaed;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.1);
+    color: #5f6368;
+    font-weight: 500;
+
+    &:hover {
+      background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
+      border-color: #dadce0;
+      color: #202124;
+      box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.24);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%);
+      transform: translateY(0);
+      box-shadow: 0 1px 2px rgba(60, 64, 67, 0.1);
+    }
+
+    .btn-text {
+      color: inherit;
+      font-weight: inherit;
+    }
+  }
+
+  // Enhanced notation table
+  .notation-table {
+    background: #ffffff;
+    border: 1px solid #e8eaed;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.1);
+
+    .notation-header {
+      background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
+      border-bottom: 1px solid #e8eaed;
+      color: #202124;
+      font-weight: 600;
+    }
+
+    .notation-row {
+      &:hover {
+        background: #f8f9fa;
+      }
+
+      &.current {
+        background: linear-gradient(135deg, #e8f0fe 0%, #f1f8ff 100%);
+        border-left: 3px solid #1a73e8;
+      }
+    }
+  }
+
+  // Enhanced captured pieces
+  .captured-pieces {
+    .captured-section {
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      border: 1px solid #e8eaed;
+      box-shadow: 0 1px 2px rgba(60, 64, 67, 0.1);
+    }
+  }
+
+  // Fix text visibility for light mode
+  .white-timer .timer-label {
+    color: #202124 !important; // Dark text for white player in light mode
+    font-weight: 600;
+  }
+
+  .black-timer .timer-label {
+    color: #5f6368 !important; // Gray text for black player in light mode
+    font-weight: 600;
+  }
+
+  // Enhanced turn indicators
+  .turn-white {
+    background-color: #ffffff !important;
+    border: 2px solid #202124 !important;
+  }
+
+  .turn-black {
+    background-color: #202124 !important;
+    border: 2px solid #202124 !important;
+  }
+
+  // Player info text improvements
+  .player-info {
+    .player-name {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .player-time {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+  }
+
+  // Status text improvements
+  .status-text,
+  .game-status {
+    color: #202124 !important;
+    font-weight: 600;
+  }
+
+  // HomePage specific light theme fixes
+  .home-page {
+    .play-button {
+      background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+      color: #ffffff !important; // Ensure white text on colored gradient button
+      
+      &.secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary) !important; // Use primary text for secondary buttons
+      }
+    }
+
+    .hero-title {
+      color: var(--text-primary) !important;
+      
+      .chess-piece {
+        color: var(--accent-primary) !important;
+      }
+    }
+
+    .hero-subtitle {
+      color: var(--text-secondary) !important;
+    }
+
+    .section-title {
+      color: var(--text-primary) !important;
+    }
+
+    .feature-card {
+      h3 {
+        color: var(--text-primary) !important;
+      }
+      
+      p {
+        color: var(--text-secondary) !important;
+      }
+    }
+
+    .rule-category {
+      h3 {
+        color: var(--text-primary) !important;
+      }
+      
+      p {
+        color: var(--text-secondary) !important;
+      }
+    }
+
+    .piece-rule {
+      div {
+        strong {
+          color: var(--text-primary) !important;
+        }
+        
+        color: var(--text-secondary) !important;
+      }
+    }
+
+    .special-move {
+      strong {
+        color: var(--accent-primary) !important;
+      }
+      
+      color: var(--text-secondary) !important;
+    }
+
+    .end-condition {
+      strong {
+        color: var(--accent-secondary) !important;
+      }
+      
+      color: var(--text-secondary) !important;
+    }
+
+    .control-item {
+      strong {
+        color: var(--accent-primary) !important;
+      }
+      
+      color: var(--text-secondary) !important;
+    }
+
+    .cta-section {
+      h2 {
+        color: var(--text-primary) !important;
+      }
+      
+      p {
+        color: var(--text-secondary) !important;
+      }
+    }
+  }
 }
 
 // Base styles
@@ -58,9 +401,26 @@ body {
   box-shadow: 0 2px 4px var(--shadow);
 
   .app-title {
+    background: none;
+    border: none;
     font-size: 1.5rem;
     font-weight: 600;
     color: var(--text-primary);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    
+    &:hover {
+      background-color: var(--hover-overlay);
+      transform: translateY(-1px);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
   }
 
   .app-nav {
@@ -104,7 +464,7 @@ body {
 
 // Large desktop layout protection (above 1100px)
 @media screen and (min-width: 1101px) {
-  .game-container {
+  .game-container:not([style*="display: none"]) {
     display: grid !important;
     grid-template-columns: 1fr 400px !important;
     gap: 2rem !important;
@@ -1549,7 +1909,7 @@ body {
     text-align: center !important;
   }
 
-  .game-container {
+  .game-container:not([style*="display: none"]) {
     display: grid !important;
     grid-template-columns: 1fr 350px !important;
     gap: 2rem !important;
@@ -1571,10 +1931,14 @@ body {
   }
 
   .chess-board {
-    width: min(65vw, 480px);
-    height: min(65vw, 480px);
-    max-width: 480px;
-    max-height: 480px;
+    width: min(50vw, 500px);
+    height: min(50vw, 500px);
+    max-width: 500px;
+    max-height: 500px;
+  }
+
+  .chess-square {
+    font-size: 2.8rem; // Slightly smaller for this screen size
   }
 
   .right-panel {
@@ -1600,7 +1964,7 @@ body {
     text-align: center !important;
   }
 
-  .game-container {
+  .game-container:not([style*="display: none"]) {
     display: grid !important;
     grid-template-columns: 1fr 300px !important; // Smaller right panel
     gap: 1.5rem !important; // Smaller gap
@@ -1628,10 +1992,14 @@ body {
   }
 
   .chess-board {
-    width: min(60vw, 420px); // Smaller board
-    height: min(60vw, 420px);
-    max-width: 420px;
-    max-height: 420px;
+    width: min(55vw, 450px); // Better proportions for this screen size
+    height: min(55vw, 450px);
+    max-width: 450px;
+    max-height: 450px;
+  }
+
+  .chess-square {
+    font-size: 2.5rem; // Proportional to board size
   }
 
   .right-panel {
@@ -1746,10 +2114,14 @@ body {
   }
 
   .chess-board {
-    width: min(65vw, 480px);
-    height: min(65vw, 480px);
-    max-width: 480px;
-    max-height: 480px;
+    width: min(50vw, 500px);
+    height: min(50vw, 500px);
+    max-width: 500px;
+    max-height: 500px;
+  }
+
+  .chess-square {
+    font-size: 2.8rem; // Proportional to board size
   }
 
   // Fix captured pieces spacing - add significant margin
@@ -1757,7 +2129,7 @@ body {
     margin-top: 2.5rem; // Large gap from chess board
     margin-bottom: 1rem; // Space from any elements below
     width: 100%;
-    max-width: 480px; // Match chess board width
+    max-width: 500px; // Match chess board width
   }
 
   .board-controls {

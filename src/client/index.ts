@@ -32,7 +32,6 @@ class ChessApp {
   private loadSettings(): GameSettings {
     const savedSettings = localStorage.getItem('chess-settings');
     return savedSettings ? JSON.parse(savedSettings) : {
-      allowPreMoves: true,
       showCoordinates: true,
       highlightLegalMoves: true,
       animationSpeed: 1,
@@ -54,7 +53,9 @@ class ChessApp {
     appElement.innerHTML = `
       <div class="chess-app" data-theme="${this.settings.theme}">
         <header class="app-header">
-          <h1 class="app-title">Chess Platform</h1>
+          <button class="app-title" data-action="home">
+            Chess Platform
+          </button>
           <nav class="app-nav">
             <button class="nav-btn" data-action="home">Home</button>
             <button class="nav-btn" data-action="appearance">Appearance</button>
@@ -95,7 +96,8 @@ class ChessApp {
       document.getElementById('chess-board')!,
       this.engine,
       this.settings,
-      (move: Move) => this.handleMove(move)
+      (move: Move) => this.handleMove(move),
+      (type: 'checkmate' | 'stalemate' | 'draw') => this.playGameEndSound(type)
     );
 
     this.notationTable = new NotationTable(
@@ -201,6 +203,9 @@ class ChessApp {
       }
     });
 
+    // Setup system theme listener for automatic theme switching
+    this.setupSystemThemeListener();
+
     // TODO: Add event system for engine events
     // For now, we'll handle updates manually
 
@@ -254,14 +259,26 @@ class ChessApp {
 
   private applyTheme(): void {
     const appElement = document.querySelector('.chess-app')!;
-    appElement.setAttribute('data-theme', this.settings.theme);
-
+    
     if (this.settings.theme === 'system') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      appElement.setAttribute('data-actual-theme', prefersDark ? 'dark' : 'light');
+      const actualTheme = prefersDark ? 'dark' : 'light';
+      appElement.setAttribute('data-theme', actualTheme);
+      appElement.setAttribute('data-actual-theme', actualTheme);
     } else {
+      appElement.setAttribute('data-theme', this.settings.theme);
       appElement.setAttribute('data-actual-theme', this.settings.theme);
     }
+  }
+
+  private setupSystemThemeListener(): void {
+    // Listen for system theme changes when in system mode
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', () => {
+      if (this.settings.theme === 'system') {
+        this.applyTheme();
+      }
+    });
   }
 
   private applySettings(): void {
@@ -413,8 +430,75 @@ class ChessApp {
   private playMoveSound(move: any): void {
     if (!this.settings.soundEffects) return;
 
-    // TODO: Implement sound system
-    console.log('Playing move sound for:', move);
+    try {
+      // Create audio context for different types of moves
+      const isCapture = move.captured;
+      const isCastling = move.type === 'castling';
+      const isCheck = this.engine.isInCheck(this.engine.getCurrentPlayer() === 'white' ? 'black' : 'white');
+      
+      let frequency = 800; // Default move sound
+      let duration = 0.1;
+      
+      if (isCastling) {
+        // Castling sound - lower, longer tone
+        frequency = 600;
+        duration = 0.15;
+      } else if (isCapture) {
+        // Capture sound - higher, sharper tone
+        frequency = 1000;
+        duration = 0.12;
+      } else if (isCheck) {
+        // Check sound - warning tone
+        frequency = 1200;
+        duration = 0.2;
+      }
+      
+      this.playTone(frequency, duration);
+    } catch (error) {
+      console.log('Sound unavailable:', error);
+    }
+  }
+
+  private playGameEndSound(type: 'checkmate' | 'stalemate' | 'draw'): void {
+    if (!this.settings.soundEffects) return;
+
+    try {
+      if (type === 'checkmate') {
+        // Checkmate - dramatic descending tones
+        this.playTone(800, 0.3);
+        setTimeout(() => this.playTone(600, 0.3), 150);
+        setTimeout(() => this.playTone(400, 0.4), 300);
+      } else if (type === 'stalemate') {
+        // Stalemate - neutral ascending and descending tone
+        this.playTone(600, 0.2);
+        setTimeout(() => this.playTone(700, 0.2), 100);
+        setTimeout(() => this.playTone(600, 0.3), 200);
+      } else {
+        // Draw - balanced tone
+        this.playTone(650, 0.3);
+      }
+    } catch (error) {
+      console.log('Sound unavailable:', error);
+    }
+  }
+
+  private playTone(frequency: number, duration: number): void {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + duration);
   }
 
   private showAbout(): void {
@@ -425,7 +509,7 @@ A comprehensive chess game platform with multiple play modes and full chess rule
 Features:
 - Standard chess mechanics with all rules
 - Multiple game modes (solo, friend, bot)
-- Pre-moves and extended features
+- Advanced features and gameplay options
 - Responsive design with themes
 - Time controls and game analysis
 
