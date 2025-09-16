@@ -10,10 +10,12 @@ export class GamePanel {
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private gameMode: 'friend' | 'bot' = 'friend';
   private botDifficulty: number = 10;
+  private humanColor: 'white' | 'black' = 'white'; // Human player color in bot mode
   private actionCallback?: (action: string) => void;
   private timeoutCallback?: (playerColor: 'white' | 'black') => void;
   private gameOverCallback?: (type: 'victory' | 'defeat' | 'draw', title: string, description: string) => void;
   private isPaused: boolean = false;
+  private pendingDrawOffer: { from: 'white' | 'black' } | null = null;
 
   constructor(
     container: HTMLElement, 
@@ -55,7 +57,7 @@ export class GamePanel {
         
         <div class="game-actions">
           <div class="action-group">
-            <button class="action-btn" data-action="offer-draw" title="Offer Draw">
+            <button class="action-btn draw-switch-btn" data-action="offer-draw" title="Offer Draw">
               <span class="btn-icon">🤝</span>
               <span class="btn-text">Draw</span>
             </button>
@@ -174,7 +176,11 @@ export class GamePanel {
   private handleAction(action: string): void {
     switch (action) {
       case 'offer-draw':
-        this.offerDraw();
+        if (this.gameMode === 'bot') {
+          this.switchSides();
+        } else {
+          this.offerDraw();
+        }
         break;
       case 'resign':
         this.resign();
@@ -199,8 +205,10 @@ export class GamePanel {
 
     if (mode === 'bot') {
       botSettings?.classList.remove('hidden');
+      this.updateDrawSwitchButton();
     } else {
       botSettings?.classList.add('hidden');
+      this.updateDrawSwitchButton();
     }
 
     this.addLogEntry(`Game mode changed to: ${mode}`);
@@ -349,6 +357,7 @@ export class GamePanel {
     }
     
     this.updateTimerDisplay();
+    this.updateDrawButtonState(); // Update draw button state when turn changes
     
     // Update turn indicator
     const whiteIndicator = this.container.querySelector('.turn-white');
@@ -359,9 +368,142 @@ export class GamePanel {
   }
 
   private offerDraw(): void {
+    const gameState = this.engine.getGameState();
+    const currentPlayer = gameState.currentPlayer;
+    const opponent = currentPlayer === 'white' ? 'black' : 'white';
+    
+    // Check if there's already a pending draw offer
+    if (this.pendingDrawOffer) {
+      if (this.pendingDrawOffer.from === currentPlayer) {
+        this.addLogEntry('You already offered a draw. Waiting for opponent\'s response.');
+        return;
+      } else {
+        // The opponent offered a draw, this is an acceptance
+        this.acceptDrawOffer();
+        return;
+      }
+    }
+    
     if (confirm('Are you sure you want to offer a draw?')) {
-      this.addLogEntry('Draw offered');
-      // TODO: Implement draw offer logic
+      this.pendingDrawOffer = { from: currentPlayer };
+      this.addLogEntry(`${currentPlayer === 'white' ? 'White' : 'Black'} offers a draw`);
+      this.updateDrawButtonState();
+      
+      // Show draw offer popup to opponent immediately for friend mode
+      setTimeout(() => {
+        this.showDrawOfferPopup(opponent);
+      }, 500);
+    }
+  }
+
+  private showDrawOfferPopup(forPlayer: 'white' | 'black'): void {
+    const offeringPlayer = this.pendingDrawOffer?.from;
+    const offeringPlayerName = offeringPlayer === 'white' ? 'White' : 'Black';
+    
+    // Remove any existing draw offer popup
+    const existingPopup = document.querySelector('.draw-offer-popup');
+    if (existingPopup) {
+      existingPopup.remove();
+    }
+
+    const popup = document.createElement('div');
+    popup.className = 'draw-offer-popup';
+    
+    popup.innerHTML = `
+      <div class="draw-offer-content">
+        <div class="offer-icon">🤝</div>
+        <div class="offer-title">Draw Offer</div>
+        <div class="offer-description">${offeringPlayerName} has offered a draw.</div>
+        <div class="offer-question">Do you accept the draw?</div>
+        <div class="offer-actions">
+          <button class="btn btn-primary accept-draw">Accept Draw</button>
+          <button class="btn btn-secondary decline-draw">Decline</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(popup);
+
+    // Add event listeners
+    const acceptBtn = popup.querySelector('.accept-draw');
+    const declineBtn = popup.querySelector('.decline-draw');
+    
+    acceptBtn?.addEventListener('click', () => {
+      this.acceptDrawOffer();
+      popup.remove();
+    });
+    
+    declineBtn?.addEventListener('click', () => {
+      this.declineDrawOffer();
+      popup.remove();
+    });
+
+    // Auto-decline after 30 seconds if no response
+    setTimeout(() => {
+      if (document.body.contains(popup)) {
+        this.declineDrawOffer();
+        popup.remove();
+      }
+    }, 30000);
+  }
+
+  private acceptDrawOffer(): void {
+    if (!this.pendingDrawOffer) return;
+    
+    this.pendingDrawOffer = null;
+    this.addLogEntry('Draw offer accepted - Game drawn');
+    this.updateDrawButtonState();
+    
+    // Show game result notification
+    if (this.gameOverCallback) {
+      this.gameOverCallback('draw', 'Draw', 'Draw offer accepted');
+    }
+    
+    this.showGameOver('draw');
+  }
+
+  private declineDrawOffer(): void {
+    if (!this.pendingDrawOffer) return;
+    
+    const offeringPlayer = this.pendingDrawOffer.from;
+    this.pendingDrawOffer = null;
+    
+    this.addLogEntry(`Draw offer declined - Game continues`);
+    this.updateDrawButtonState();
+  }
+
+  private updateDrawButtonState(): void {
+    // In bot mode, use the switch button functionality instead
+    if (this.gameMode === 'bot') {
+      this.updateDrawSwitchButton();
+      return;
+    }
+    
+    const drawBtn = this.container.querySelector('[data-action="offer-draw"]');
+    const btnText = drawBtn?.querySelector('.btn-text');
+    
+    if (!drawBtn || !btnText) return;
+    
+    if (this.pendingDrawOffer) {
+      const gameState = this.engine.getGameState();
+      const currentPlayer = gameState.currentPlayer;
+      
+      if (this.pendingDrawOffer.from === currentPlayer) {
+        // Current player offered draw
+        btnText.textContent = 'Pending...';
+        (drawBtn as HTMLElement).setAttribute('title', 'Draw offer pending');
+        drawBtn.classList.add('pending-offer');
+      } else {
+        // Opponent offered draw
+        btnText.textContent = 'Accept';
+        (drawBtn as HTMLElement).setAttribute('title', 'Accept draw offer');
+        drawBtn.classList.add('accept-offer');
+      }
+    } else {
+      // No pending offer
+      btnText.textContent = 'Draw';
+      (drawBtn as HTMLElement).setAttribute('title', 'Offer Draw');
+      drawBtn.classList.remove('pending-offer', 'accept-offer');
     }
   }
 
@@ -442,12 +584,15 @@ export class GamePanel {
       const winner = gameState.currentPlayer === 'white' ? 'Black' : 'White';
       statusText.textContent = `Checkmate! ${winner} wins`;
       this.addLogEntry(`Checkmate! ${winner} wins`);
+      this.stopTimer(); // Stop timer when game ends
     } else if (gameState.isStalemate) {
       statusText.textContent = 'Stalemate - Draw';
       this.addLogEntry('Stalemate - Draw');
+      this.stopTimer(); // Stop timer when game ends
     } else if (gameState.isDraw) {
       statusText.textContent = 'Draw';
       this.addLogEntry('Game drawn');
+      this.stopTimer(); // Stop timer when game ends
     } else if (gameState.isCheck) {
       const player = gameState.currentPlayer === 'white' ? 'White' : 'Black';
       statusText.textContent = `${player} in check`;
@@ -511,6 +656,9 @@ export class GamePanel {
     // Reset player to white
     this.currentPlayer = 'white';
     
+    // Reset draw offer state
+    this.pendingDrawOffer = null;
+    
     // Re-enable action buttons
     const actionButtons = this.container.querySelectorAll('.action-btn');
     actionButtons.forEach(button => {
@@ -528,6 +676,7 @@ export class GamePanel {
 
     // Reset status
     this.updateGameStatus();
+    this.updateDrawSwitchButton();
   }
 
   public getSelectedGameMode(): string {
@@ -575,5 +724,56 @@ export class GamePanel {
 
   public isPausedState(): boolean {
     return this.isPaused;
+  }
+
+  private updateDrawSwitchButton(): void {
+    const button = this.container.querySelector('.draw-switch-btn');
+    const btnIcon = button?.querySelector('.btn-icon');
+    const btnText = button?.querySelector('.btn-text');
+    
+    if (this.gameMode === 'bot') {
+      // Switch to "Switch Sides" button
+      if (btnIcon) btnIcon.textContent = '🔄';
+      if (btnText) btnText.textContent = 'Switch';
+      button?.setAttribute('title', 'Switch Sides (Currently: ' + (this.humanColor === 'white' ? 'White' : 'Black') + ')');
+    } else {
+      // Switch to "Draw" button
+      if (btnIcon) btnIcon.textContent = '🤝';
+      if (btnText) btnText.textContent = 'Draw';
+      button?.setAttribute('title', 'Offer Draw');
+    }
+  }
+
+  private switchSides(): void {
+    // Toggle human player color
+    this.humanColor = this.humanColor === 'white' ? 'black' : 'white';
+    
+    // Update button to show current side
+    this.updateDrawSwitchButton();
+    
+    // Flip board so player's pieces are at bottom
+    if (this.actionCallback) {
+      this.actionCallback('flip-board');
+    }
+    
+    // Start a new game and let bot move first if human is black
+    if (this.actionCallback) {
+      this.actionCallback('new-game');
+    }
+    
+    // If human chose black, trigger bot's first move after short delay
+    if (this.humanColor === 'black') {
+      setTimeout(() => {
+        if (this.actionCallback) {
+          this.actionCallback('bot-move');
+        }
+      }, 500);
+    }
+    
+    this.addLogEntry(`Switched to playing as ${this.humanColor === 'white' ? 'White' : 'Black'}`);
+  }
+
+  public getHumanColor(): 'white' | 'black' {
+    return this.humanColor;
   }
 }

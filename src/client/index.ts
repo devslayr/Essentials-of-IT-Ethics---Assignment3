@@ -230,6 +230,9 @@ class ChessApp {
       case 'undo':
         this.undoMove();
         break;
+      case 'bot-move':
+        this.handleBotMove();
+        break;
     }
   }
 
@@ -280,7 +283,11 @@ class ChessApp {
 
   private handleBotMove(): void {
     const gameMode = this.gamePanel.getGameMode();
-    if (gameMode === 'bot' && this.engine.getCurrentPlayer() === 'black') {
+    const humanColor = this.gamePanel.getHumanColor();
+    const currentPlayer = this.engine.getCurrentPlayer();
+    
+    // Bot should move when it's not the human player's turn
+    if (gameMode === 'bot' && currentPlayer !== humanColor) {
       // Add a reasonable delay for bot move to feel more natural
       setTimeout(() => {
         this.makeIntelligentBotMove();
