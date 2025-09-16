@@ -1,25 +1,31 @@
-import { Piece, PieceColor } from '../../shared/types';
+import { Piece, PieceColor, GameSettings } from '../../shared/types';
 
 export class CapturedPieces {
     private container: HTMLElement;
     private capturedWhite: Piece[] = [];
     private capturedBlack: Piece[] = [];
+    private settings: GameSettings;
 
-    constructor(container: HTMLElement) {
+    constructor(container: HTMLElement, settings: GameSettings) {
         this.container = container;
+        this.settings = settings;
         this.createDisplay();
     }
 
     private createDisplay(): void {
         this.container.innerHTML = `
-      <div class="captured-pieces">
-        <div class="captured-section white-captured">
-          <div class="captured-label">Captured by Black</div>
-          <div class="captured-list white-pieces"></div>
-        </div>
-        <div class="captured-section black-captured">
-          <div class="captured-label">Captured by White</div>
-          <div class="captured-list black-pieces"></div>
+      <div class="captured-pieces-section">
+        <div class="captured-pieces-container">
+          <div class="captured-section white-captured">
+            <div class="captured-label" data-color="♛">Captured by Black</div>
+            <div class="captured-list white-pieces"></div>
+            <div class="material-advantage white-advantage"></div>
+          </div>
+          <div class="captured-section black-captured">
+            <div class="captured-label" data-color="♕">Captured by White</div>
+            <div class="captured-list black-pieces"></div>
+            <div class="material-advantage black-advantage"></div>
+          </div>
         </div>
       </div>
     `;
@@ -78,42 +84,70 @@ export class CapturedPieces {
     private updateMaterialAdvantage(): void {
         const pieceValues = { queen: 9, rook: 5, bishop: 3, knight: 3, pawn: 1, king: 0 };
 
-        const whiteValue = this.capturedWhite.reduce((sum, piece) => sum + pieceValues[piece.type], 0);
-        const blackValue = this.capturedBlack.reduce((sum, piece) => sum + pieceValues[piece.type], 0);
+        // capturedWhite = white pieces captured by black (black gets these points)
+        // capturedBlack = black pieces captured by white (white gets these points)
+        const blackScore = this.capturedWhite.reduce((sum, piece) => sum + pieceValues[piece.type], 0);
+        const whiteScore = this.capturedBlack.reduce((sum, piece) => sum + pieceValues[piece.type], 0);
 
-        const advantage = blackValue - whiteValue;
+        const whiteAdvantage = whiteScore - blackScore;
 
-        // Clear previous advantage indicators
-        this.container.querySelectorAll('.material-advantage').forEach(el => el.remove());
+        const whiteAdvantageEl = this.container.querySelector('.white-advantage')! as HTMLElement;
+        const blackAdvantageEl = this.container.querySelector('.black-advantage')! as HTMLElement;
 
-        if (advantage > 0) {
+        // Clear both advantage displays
+        whiteAdvantageEl.textContent = '';
+        whiteAdvantageEl.className = 'material-advantage white-advantage';
+        blackAdvantageEl.textContent = '';
+        blackAdvantageEl.className = 'material-advantage black-advantage';
+
+        if (whiteAdvantage > 0) {
             // White has advantage (captured more valuable black pieces)
-            const whiteSection = this.container.querySelector('.white-captured')!;
-            const advantageElement = document.createElement('div');
-            advantageElement.className = 'material-advantage';
-            advantageElement.textContent = `+${advantage}`;
-            whiteSection.appendChild(advantageElement);
-        } else if (advantage < 0) {
+            blackAdvantageEl.textContent = `+${whiteAdvantage}`;
+            blackAdvantageEl.classList.add('positive');
+        } else if (whiteAdvantage < 0) {
             // Black has advantage (captured more valuable white pieces)
-            const blackSection = this.container.querySelector('.black-captured')!;
-            const advantageElement = document.createElement('div');
-            advantageElement.className = 'material-advantage';
-            advantageElement.textContent = `+${Math.abs(advantage)}`;
-            blackSection.appendChild(advantageElement);
+            whiteAdvantageEl.textContent = `+${Math.abs(whiteAdvantage)}`;
+            whiteAdvantageEl.classList.add('positive');
         }
     }
 
     private getPieceSymbol(type: string, color: PieceColor): string {
-        const pieces: Record<string, Record<PieceColor, string>> = {
+        const pieceSet = this.settings.pieceSet || 'classic';
+        
+        const pieceSets: { [key: string]: { [key: string]: { white: string; black: string } } } = {
+          classic: {
             king: { white: '♔', black: '♚' },
             queen: { white: '♕', black: '♛' },
             rook: { white: '♖', black: '♜' },
             bishop: { white: '♗', black: '♝' },
             knight: { white: '♘', black: '♞' },
             pawn: { white: '♙', black: '♟' }
+          },
+          modern: {
+            king: { white: '🤴', black: '👑' },
+            queen: { white: '👸', black: '💂‍♀️' },
+            rook: { white: '🏰', black: '🏯' },
+            bishop: { white: '⛪', black: '🕌' },
+            knight: { white: '🐎', black: '🏇' },
+            pawn: { white: '⚪', black: '⚫' }
+          },
+          medieval: {
+            king: { white: '♔', black: '♚' },
+            queen: { white: '♕', black: '♛' },
+            rook: { white: '🏭', black: '🏰' },
+            bishop: { white: '⛪', black: '🕌' },
+            knight: { white: '🛡️', black: '⚔️' },
+            pawn: { white: '🔰', black: '⚫' }
+          }
         };
 
-        return pieces[type]?.[color] || '';
+        const symbols = pieceSets[pieceSet] || pieceSets.classic;
+        return symbols[type]?.[color] || '';
+    }
+
+    public updateSettings(settings: GameSettings): void {
+        this.settings = settings;
+        this.updateDisplay();
     }
 
     public reset(): void {

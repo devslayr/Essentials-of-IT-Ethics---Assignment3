@@ -7,11 +7,16 @@ export class NotationTable {
   private moves: NotationEntry[] = [];
   private currentMoveIndex: number = -1;
   private tableElement!: HTMLElement;
+  private onPositionChangeCallback?: () => void;
 
   constructor(container: HTMLElement, engine: ChessEngine) {
     this.container = container;
     this.engine = engine;
     this.createTable();
+  }
+
+  public setPositionChangeCallback(callback: () => void): void {
+    this.onPositionChangeCallback = callback;
   }
 
   private createTable(): void {
@@ -90,6 +95,7 @@ export class NotationTable {
       notationEntry.black = move;
     }
 
+    // Update to the latest move index (current position)
     this.currentMoveIndex = gameState.moves.length - 1;
     this.renderMoves();
   }
@@ -159,8 +165,26 @@ export class NotationTable {
       this.tableElement.appendChild(moveRow);
     });
 
+    // Update navigation button states
+    this.updateNavigationButtons();
+
     // Scroll to current move
     this.scrollToCurrentMove();
+  }
+
+  private updateNavigationButtons(): void {
+    const gameState = this.engine.getGameState();
+    const totalMoves = gameState.moves.length;
+    
+    const startBtn = this.container.querySelector('[data-action="start"]') as HTMLButtonElement;
+    const prevBtn = this.container.querySelector('[data-action="prev"]') as HTMLButtonElement;
+    const nextBtn = this.container.querySelector('[data-action="next"]') as HTMLButtonElement;
+    const endBtn = this.container.querySelector('[data-action="end"]') as HTMLButtonElement;
+
+    if (startBtn) startBtn.disabled = this.currentMoveIndex <= -1;
+    if (prevBtn) prevBtn.disabled = this.currentMoveIndex <= -1;
+    if (nextBtn) nextBtn.disabled = this.currentMoveIndex >= totalMoves - 1;
+    if (endBtn) endBtn.disabled = this.currentMoveIndex >= totalMoves - 1;
   }
 
   private scrollToCurrentMove(): void {
@@ -181,8 +205,13 @@ export class NotationTable {
 
     this.currentMoveIndex = moveIndex;
 
-    // TODO: Update board position to show the position after this move
-    // This would require the engine to support position navigation
+    // Update board position using ChessEngine navigation
+    this.engine.goToMoveIndex(moveIndex);
+    
+    // Trigger board update callback
+    if (this.onPositionChangeCallback) {
+      this.onPositionChangeCallback();
+    }
 
     this.renderMoves();
   }
@@ -193,7 +222,8 @@ export class NotationTable {
 
   public goToEnd(): void {
     const gameState = this.engine.getGameState();
-    this.goToMove(gameState.moves.length - 1);
+    const lastMoveIndex = gameState.moves.length - 1;
+    this.goToMove(lastMoveIndex);
   }
 
   public goToPreviousMove(): void {
@@ -202,6 +232,22 @@ export class NotationTable {
 
   public goToNextMove(): void {
     this.goToMove(this.currentMoveIndex + 1);
+  }
+
+  public syncWithCurrentPosition(): void {
+    // Sync notation table with the actual game state
+    const gameState = this.engine.getGameState();
+    this.currentMoveIndex = gameState.moves.length - 1;
+    this.renderMoves();
+  }
+
+  public getCurrentMoveIndex(): number {
+    return this.currentMoveIndex;
+  }
+
+  public isAtCurrentPosition(): boolean {
+    const gameState = this.engine.getGameState();
+    return this.currentMoveIndex === gameState.moves.length - 1;
   }
 
   public reset(): void {

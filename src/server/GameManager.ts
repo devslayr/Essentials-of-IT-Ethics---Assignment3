@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { GameRoom, Player, RoomSettings } from './GameRoom.js';
+import { GameRoom, Player, RoomSettings } from './GameRoom';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface CreateRoomOptions {

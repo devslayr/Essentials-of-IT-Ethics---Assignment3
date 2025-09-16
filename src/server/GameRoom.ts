@@ -1,6 +1,6 @@
 import { Socket } from 'socket.io';
-import { ChessEngine } from '../client/engine/ChessEngine.js';
-import { GameSettings, PieceColor, Move, GameResult } from '../shared/types.js';
+import { ChessEngine } from '../client/engine/ChessEngine';
+import { GameSettings, PieceColor, Move, GameResult } from '../shared/types';
 
 export interface Player {
   id: string;

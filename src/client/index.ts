@@ -5,7 +5,8 @@ import { GamePanel } from './components/GamePanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AppearanceModal } from './components/AppearanceModal';
 import { CapturedPieces } from './components/CapturedPieces';
-import { GameSettings, Move } from '../shared/types';
+import { HomePage } from './components/HomePage';
+import { GameSettings, Move, Square, PieceType, Piece } from '../shared/types';
 import './styles/main.scss';
 
 class ChessApp {
@@ -16,6 +17,8 @@ class ChessApp {
   private settingsModal!: SettingsModal;
   private appearanceModal!: AppearanceModal;
   private capturedPieces!: CapturedPieces;
+  private homePage!: HomePage;
+  private currentView: 'home' | 'game' = 'home';
   private settings: GameSettings;
 
   constructor() {
@@ -53,7 +56,7 @@ class ChessApp {
         <header class="app-header">
           <h1 class="app-title">Chess Platform</h1>
           <nav class="app-nav">
-            <button class="nav-btn" data-action="stream">Stream</button>
+            <button class="nav-btn" data-action="home">Home</button>
             <button class="nav-btn" data-action="appearance">Appearance</button>
             <button class="nav-btn" data-action="settings">Settings</button>
             <button class="nav-btn" data-action="about">About</button>
@@ -61,26 +64,18 @@ class ChessApp {
         </header>
         
         <main class="app-main">
-          <div class="game-container">
+          <div id="home-container" class="view-container"></div>
+          
+          <div id="game-container" class="game-container" style="display: none;">
             <div class="left-panel">
-              <div class="player-info black-player">
-                <div class="player-name">Black Player</div>
-                <div class="player-time">∞</div>
-                <div id="black-captured" class="captured-pieces-section"></div>
-              </div>
-              
               <div id="chess-board"></div>
-              
-              <div class="player-info white-player">
-                <div class="player-name">White Player</div>
-                <div class="player-time">∞</div>
-                <div id="white-captured" class="captured-pieces-section"></div>
-              </div>
               
               <div class="board-controls">
                 <button class="control-btn" data-action="flip-board">⟲</button>
                 <button class="control-btn" data-action="new-game">+ New Game</button>
               </div>
+              
+              <div id="captured-pieces-below-board"></div>
             </div>
             
             <div class="right-panel">
@@ -108,16 +103,29 @@ class ChessApp {
       this.engine
     );
 
+    // Setup callback for position changes during move history navigation
+    this.notationTable.setPositionChangeCallback(() => {
+      this.board.updatePosition();
+    });
+
     this.gamePanel = new GamePanel(
       document.getElementById('game-panel')!,
-      this.engine
+      this.engine,
+      (action: string) => this.handleAction(action),
+      (playerColor: 'white' | 'black') => this.board.handleTimeout(playerColor),
+      (type: 'victory' | 'defeat' | 'draw', title: string, description: string) => 
+        this.board.showGameResult(type, title, description)
     );
 
-    // Initialize captured pieces display  
-    const capturedContainer = document.createElement('div');
-    capturedContainer.className = 'captured-pieces-container';
-    document.getElementById('white-captured')!.appendChild(capturedContainer);
-    this.capturedPieces = new CapturedPieces(capturedContainer);
+    // Initialize captured pieces component below chess board
+    const capturedContainer = document.getElementById('captured-pieces-below-board')!;
+    this.capturedPieces = new CapturedPieces(capturedContainer, this.settings);
+
+    // Initialize HomePage
+    this.homePage = new HomePage(
+      document.getElementById('home-container')!,
+      () => this.showGameView()
+    );
 
     this.settingsModal = new SettingsModal(
       document.getElementById('settings-modal')!,
@@ -205,8 +213,8 @@ class ChessApp {
 
   private handleAction(action: string): void {
     switch (action) {
-      case 'stream':
-        // TODO: Implement streaming functionality
+      case 'home':
+        this.showHomeView();
         break;
       case 'appearance':
         this.appearanceModal.show();
@@ -223,7 +231,25 @@ class ChessApp {
       case 'new-game':
         this.newGame();
         break;
+      case 'undo':
+        this.undoMove();
+        break;
+      case 'bot-move':
+        this.handleBotMove();
+        break;
     }
+  }
+
+  private showHomeView(): void {
+    this.currentView = 'home';
+    document.getElementById('home-container')!.style.display = 'block';
+    document.getElementById('game-container')!.style.display = 'none';
+  }
+
+  private showGameView(): void {
+    this.currentView = 'game';
+    document.getElementById('home-container')!.style.display = 'none';
+    document.getElementById('game-container')!.style.display = 'block';
   }
 
   private applyTheme(): void {
@@ -245,31 +271,134 @@ class ChessApp {
 
   private applyAppearance(): void {
     this.board.updateAppearance(this.settings);
+    this.capturedPieces.updateSettings(this.settings);
     this.applyTheme();
   }
 
   private handleMove(move: Move): void {
+    // Ensure notation table is at current position before adding new move
+    if (!this.notationTable.isAtCurrentPosition()) {
+      this.notationTable.syncWithCurrentPosition();
+    }
+    
     // Update notation table
     this.notationTable.addMove(move);
 
     // Update captured pieces if there was a capture
     if (move.capturedPiece) {
       this.capturedPieces.addCapturedPiece(move.capturedPiece);
+    } else if (move.enPassant) {
+      // En passant capture - create the captured pawn piece
+      const capturedPawnColor = move.piece.color === 'white' ? 'black' : 'white';
+      const capturedPawn: Piece = {
+        type: 'pawn',
+        color: capturedPawnColor
+      };
+      this.capturedPieces.addCapturedPiece(capturedPawn);
     }
+
+    // Switch timer to next player
+    this.gamePanel.switchPlayer();
 
     // Update game panel
     this.gamePanel.updateGameStatus();
 
     // Play move sound
     this.playMoveSound(move);
+
+    // Handle bot move if in bot mode
+    this.handleBotMove();
+  }
+
+  private handleBotMove(): void {
+    const gameMode = this.gamePanel.getGameMode();
+    const humanColor = this.gamePanel.getHumanColor();
+    const currentPlayer = this.engine.getCurrentPlayer();
+    
+    // Bot should move when it's not the human player's turn
+    if (gameMode === 'bot' && currentPlayer !== humanColor) {
+      // Add a reasonable delay for bot move to feel more natural
+      setTimeout(() => {
+        this.makeIntelligentBotMove();
+      }, 800); // Single timeout with reasonable delay
+    }
+  }
+
+  private makeIntelligentBotMove(): void {
+    const legalMoves = this.engine.getAllLegalMoves();
+    if (legalMoves.length === 0) return;
+
+    let selectedMove = legalMoves[0];
+    const difficulty = this.gamePanel.getBotDifficulty();
+
+    if (difficulty <= 5) {
+      // Easy: Random move
+      selectedMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+    } else if (difficulty <= 10) {
+      // Medium: Prefer captures and checks
+      const capturesMoves = legalMoves.filter(move => {
+        const targetPiece = this.engine.getPiece(move.to);
+        return targetPiece && targetPiece.color !== this.engine.getCurrentPlayer();
+      });
+      
+      if (capturesMoves.length > 0) {
+        selectedMove = capturesMoves[Math.floor(Math.random() * capturesMoves.length)];
+      } else {
+        selectedMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+      }
+    } else {
+      // Hard: More strategic (still simplified)
+      // Prefer center squares, captures, and avoid hanging pieces
+      let bestMoves = legalMoves;
+      
+      // Prefer captures
+      const captures = legalMoves.filter(move => {
+        const targetPiece = this.engine.getPiece(move.to);
+        return targetPiece && targetPiece.color !== this.engine.getCurrentPlayer();
+      });
+      
+      if (captures.length > 0) {
+        bestMoves = captures;
+      }
+      
+      selectedMove = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+    }
+
+    const move = this.engine.makeMove(selectedMove.from, selectedMove.to, selectedMove.promotion);
+    if (move) {
+      // First update the board position
+      this.board.updatePosition();
+      
+      // Animate the bot move
+      this.board.animateMove(move);
+      
+      // Use the same handleMove method to ensure consistency
+      // This will update notation table, captured pieces, game panel, etc.
+      this.handleMove(move);
+    }
   }
 
   private undoMove(): void {
     const undoneMove = this.engine.undoMove();
     if (undoneMove) {
+      // Cancel any ongoing animations to prevent conflicts
+      this.board.cancelAnimations();
       this.board.updatePosition();
       this.notationTable.removeLastMove();
       this.gamePanel.updateGameStatus();
+      
+      // If the undone move captured a piece, remove it from captured pieces
+      if (undoneMove.capturedPiece) {
+        this.capturedPieces.removeCapturedPiece(undoneMove.capturedPiece);
+      } else if (undoneMove.enPassant) {
+        // En passant undo - remove the captured pawn
+        const capturedPawnColor = undoneMove.piece.color === 'white' ? 'black' : 'white';
+        const capturedPawn: Piece = {
+          type: 'pawn',
+          color: capturedPawnColor
+        };
+        this.capturedPieces.removeCapturedPiece(capturedPawn);
+      }
     }
   }
 
