@@ -5,6 +5,7 @@ import { GamePanel } from './components/GamePanel';
 import { SettingsModal } from './components/SettingsModal';
 import { AppearanceModal } from './components/AppearanceModal';
 import { CapturedPieces } from './components/CapturedPieces';
+import { HomePage } from './components/HomePage';
 import { GameSettings, Move, Square, PieceType, Piece } from '../shared/types';
 import './styles/main.scss';
 
@@ -16,6 +17,8 @@ class ChessApp {
   private settingsModal!: SettingsModal;
   private appearanceModal!: AppearanceModal;
   private capturedPieces!: CapturedPieces;
+  private homePage!: HomePage;
+  private currentView: 'home' | 'game' = 'home';
   private settings: GameSettings;
 
   constructor() {
@@ -53,7 +56,7 @@ class ChessApp {
         <header class="app-header">
           <h1 class="app-title">Chess Platform</h1>
           <nav class="app-nav">
-            <button class="nav-btn" data-action="stream">Stream</button>
+            <button class="nav-btn" data-action="home">Home</button>
             <button class="nav-btn" data-action="appearance">Appearance</button>
             <button class="nav-btn" data-action="settings">Settings</button>
             <button class="nav-btn" data-action="about">About</button>
@@ -61,7 +64,9 @@ class ChessApp {
         </header>
         
         <main class="app-main">
-          <div class="game-container">
+          <div id="home-container" class="view-container"></div>
+          
+          <div id="game-container" class="game-container" style="display: none;">
             <div class="left-panel">
               <div id="chess-board"></div>
               
@@ -115,6 +120,12 @@ class ChessApp {
     // Initialize captured pieces component below chess board
     const capturedContainer = document.getElementById('captured-pieces-below-board')!;
     this.capturedPieces = new CapturedPieces(capturedContainer, this.settings);
+
+    // Initialize HomePage
+    this.homePage = new HomePage(
+      document.getElementById('home-container')!,
+      () => this.showGameView()
+    );
 
     this.settingsModal = new SettingsModal(
       document.getElementById('settings-modal')!,
@@ -202,8 +213,8 @@ class ChessApp {
 
   private handleAction(action: string): void {
     switch (action) {
-      case 'stream':
-        // TODO: Implement streaming functionality
+      case 'home':
+        this.showHomeView();
         break;
       case 'appearance':
         this.appearanceModal.show();
@@ -227,6 +238,18 @@ class ChessApp {
         this.handleBotMove();
         break;
     }
+  }
+
+  private showHomeView(): void {
+    this.currentView = 'home';
+    document.getElementById('home-container')!.style.display = 'block';
+    document.getElementById('game-container')!.style.display = 'none';
+  }
+
+  private showGameView(): void {
+    this.currentView = 'game';
+    document.getElementById('home-container')!.style.display = 'none';
+    document.getElementById('game-container')!.style.display = 'block';
   }
 
   private applyTheme(): void {
