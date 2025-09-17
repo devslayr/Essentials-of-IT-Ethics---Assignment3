@@ -130,7 +130,8 @@ class ChessApp {
       (action: string) => this.handleAction(action),
       (playerColor: 'white' | 'black') => this.board.handleTimeout(playerColor),
       (type: 'victory' | 'defeat' | 'draw', title: string, description: string) => 
-        this.board.showGameResult(type, title, description)
+        this.board.showGameResult(type, title, description),
+      (mode: 'friend' | 'bot') => this.handleGameModeChange(mode)
     );
 
     // Initialize captured pieces component below chess board
@@ -465,6 +466,10 @@ class ChessApp {
         ? 'Auto-flip board after each move in friend mode (ON)' 
         : 'Auto-flip board after each move in friend mode (OFF)';
     }
+
+    // Update visibility based on current game mode
+    const currentMode = this.gamePanel.getGameMode();
+    this.updateAutoSwitchButtonVisibility(currentMode);
   }
 
   private handleAutoSwitchAfterMove(): void {
@@ -475,6 +480,22 @@ class ChessApp {
       setTimeout(() => {
         this.board.flipBoard();
       }, 500);
+    }
+  }
+
+  private handleGameModeChange(mode: 'friend' | 'bot'): void {
+    this.updateAutoSwitchButtonVisibility(mode);
+  }
+
+  private updateAutoSwitchButtonVisibility(mode: 'friend' | 'bot'): void {
+    const autoSwitchBtn = document.querySelector('.auto-switch-btn') as HTMLButtonElement;
+    
+    if (autoSwitchBtn) {
+      if (mode === 'friend') {
+        autoSwitchBtn.style.display = 'flex';
+      } else {
+        autoSwitchBtn.style.display = 'none';
+      }
     }
   }
 

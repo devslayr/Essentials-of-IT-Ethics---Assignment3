@@ -14,6 +14,7 @@ export class GamePanel {
   private actionCallback?: (action: string) => void;
   private timeoutCallback?: (playerColor: 'white' | 'black') => void;
   private gameOverCallback?: (type: 'victory' | 'defeat' | 'draw', title: string, description: string) => void;
+  private gameModeChangeCallback?: (mode: 'friend' | 'bot') => void;
   private isPaused: boolean = false;
   private pendingDrawOffer: { from: 'white' | 'black' } | null = null;
 
@@ -22,13 +23,15 @@ export class GamePanel {
     engine: ChessEngine, 
     actionCallback?: (action: string) => void,
     timeoutCallback?: (playerColor: 'white' | 'black') => void,
-    gameOverCallback?: (type: 'victory' | 'defeat' | 'draw', title: string, description: string) => void
+    gameOverCallback?: (type: 'victory' | 'defeat' | 'draw', title: string, description: string) => void,
+    gameModeChangeCallback?: (mode: 'friend' | 'bot') => void
   ) {
     this.container = container;
     this.engine = engine;
     this.actionCallback = actionCallback;
     this.timeoutCallback = timeoutCallback;
     this.gameOverCallback = gameOverCallback;
+    this.gameModeChangeCallback = gameModeChangeCallback;
     this.createPanel();
   }
 
@@ -209,6 +212,11 @@ export class GamePanel {
     } else {
       botSettings?.classList.add('hidden');
       this.updateDrawSwitchButton();
+    }
+
+    // Notify the main app about game mode change
+    if (this.gameModeChangeCallback) {
+      this.gameModeChangeCallback(this.gameMode);
     }
 
     this.addLogEntry(`Game mode changed to: ${mode}`);
