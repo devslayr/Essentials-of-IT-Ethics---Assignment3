@@ -59,6 +59,7 @@ export interface GameSettings {
   theme: 'light' | 'dark' | 'system';
   boardTheme: string;
   pieceSet: string;
+  autoSwitchInFriendMode: boolean;
 }
 
 export interface Player {

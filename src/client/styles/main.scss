@@ -778,6 +778,33 @@ body {
       background-color: var(--bg-tertiary);
       color: var(--text-primary);
     }
+
+    // Auto-switch button specific styling
+    &.auto-switch-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      .auto-switch-icon {
+        font-size: 1.2em;
+      }
+      
+      .auto-switch-text {
+        font-size: 0.9em;
+        font-weight: 500;
+      }
+      
+      &.active {
+        background-color: var(--accent-primary);
+        color: white;
+        border-color: var(--accent-primary);
+        
+        &:hover {
+          background-color: var(--accent-secondary);
+          border-color: var(--accent-secondary);
+        }
+      }
+    }
   }
 }
 

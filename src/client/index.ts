@@ -27,19 +27,29 @@ class ChessApp {
     this.initializeComponents();
     this.setupEventListeners();
     this.applyTheme();
+    this.updateAutoSwitchButton();
   }
 
   private loadSettings(): GameSettings {
     const savedSettings = localStorage.getItem('chess-settings');
-    return savedSettings ? JSON.parse(savedSettings) : {
+    const defaultSettings = {
       showCoordinates: true,
       highlightLegalMoves: true,
       animationSpeed: 1,
       soundEffects: true,
       theme: 'system' as const,
       boardTheme: 'brown',
-      pieceSet: 'classic'
+      pieceSet: 'classic',
+      autoSwitchInFriendMode: false
     };
+    
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      // Merge with defaults to ensure all properties exist
+      return { ...defaultSettings, ...parsed };
+    }
+    
+    return defaultSettings;
   }
 
   private saveSettings(): void {
@@ -74,6 +84,10 @@ class ChessApp {
               <div class="board-controls">
                 <button class="control-btn" data-action="flip-board">⟲</button>
                 <button class="control-btn" data-action="new-game">+ New Game</button>
+                <button class="control-btn auto-switch-btn" data-action="toggle-auto-switch">
+                  <span class="auto-switch-icon">🔄</span>
+                  <span class="auto-switch-text">Auto Switch: OFF</span>
+                </button>
               </div>
               
               <div id="captured-pieces-below-board"></div>
@@ -236,6 +250,9 @@ class ChessApp {
       case 'new-game':
         this.newGame();
         break;
+      case 'toggle-auto-switch':
+        this.toggleAutoSwitch();
+        break;
       case 'undo':
         this.undoMove();
         break;
@@ -322,6 +339,9 @@ class ChessApp {
 
     // Play move sound
     this.playMoveSound(move);
+
+    // Handle auto-switch after move in friend mode
+    this.handleAutoSwitchAfterMove();
 
     // Handle bot move if in bot mode
     this.handleBotMove();
@@ -425,6 +445,37 @@ class ChessApp {
     this.notationTable.reset();
     this.gamePanel.reset();
     this.capturedPieces.reset();
+  }
+
+  private toggleAutoSwitch(): void {
+    this.settings.autoSwitchInFriendMode = !this.settings.autoSwitchInFriendMode;
+    this.saveSettings();
+    this.updateAutoSwitchButton();
+  }
+
+  private updateAutoSwitchButton(): void {
+    const autoSwitchBtn = document.querySelector('.auto-switch-btn') as HTMLButtonElement;
+    const autoSwitchText = autoSwitchBtn?.querySelector('.auto-switch-text') as HTMLSpanElement;
+    
+    if (autoSwitchBtn && autoSwitchText) {
+      const isOn = this.settings.autoSwitchInFriendMode;
+      autoSwitchText.textContent = `Auto Switch: ${isOn ? 'ON' : 'OFF'}`;
+      autoSwitchBtn.classList.toggle('active', isOn);
+      autoSwitchBtn.title = isOn 
+        ? 'Auto-flip board after each move in friend mode (ON)' 
+        : 'Auto-flip board after each move in friend mode (OFF)';
+    }
+  }
+
+  private handleAutoSwitchAfterMove(): void {
+    // Only auto-switch in friend mode, not bot mode
+    const gameMode = this.gamePanel.getGameMode();
+    if (gameMode === 'friend' && this.settings.autoSwitchInFriendMode) {
+      // Add a small delay so players can see their move before the board flips
+      setTimeout(() => {
+        this.board.flipBoard();
+      }, 500);
+    }
   }
 
   private playMoveSound(move: any): void {

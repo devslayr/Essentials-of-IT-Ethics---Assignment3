@@ -198,7 +198,8 @@ export class SettingsModal {
         soundEffects: true,
         theme: 'system',
         boardTheme: 'brown',
-        pieceSet: 'classic'
+        pieceSet: 'classic',
+        autoSwitchInFriendMode: false
       };
 
       this.settings = defaultSettings;
