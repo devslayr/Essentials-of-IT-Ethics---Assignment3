@@ -2,6 +2,51 @@
 
 This guide covers multiple deployment options for the Chess Platform project using GitHub and other platforms.
 
+## 🎮 QUICK START - Play Chess on GitHub Pages NOW!
+
+Your chess game should be automatically deploying to GitHub Pages. Here's how to access it:
+
+### Step 1: Enable GitHub Pages (One-time setup)
+1. Go to your GitHub repository: `https://github.com/devslayr/Essentials-of-IT-Ethics---Assignment3`
+2. Click on **Settings** tab
+3. Scroll down to **Pages** section (left sidebar)
+4. Under **Source**, select **"GitHub Actions"**
+5. Save the settings
+
+### Step 2: Wait for Deployment
+- The GitHub Actions workflow is now running automatically
+- You can check the progress in the **Actions** tab of your repository
+- Wait for the green checkmark ✅
+
+### Step 3: Play Chess Online!
+Once deployed, your chess game will be available at:
+**https://devslayr.github.io/Essentials-of-IT-Ethics---Assignment3/**
+
+## 🚀 What You'll Get on GitHub Pages
+
+**Perfect for playing chess online:**
+- ✅ Full chess gameplay with all rules
+- ✅ Beautiful interactive chess board
+- ✅ Move validation and legal move highlighting  
+- ✅ Check/Checkmate/Stalemate detection
+- ✅ Move history and notation
+- ✅ Multiple themes and board styles
+- ✅ Responsive design (works on mobile)
+- ❌ No multiplayer (GitHub Pages is static hosting)
+
+## 🔧 Troubleshooting GitHub Pages
+
+### If you see a README instead of the chess game:
+1. Check that GitHub Pages source is set to "GitHub Actions"
+2. Look at the Actions tab to see if the deployment succeeded
+3. Wait a few minutes for DNS propagation
+
+### If the deployment fails:
+1. Go to your repository's **Actions** tab
+2. Click on the failed workflow run
+3. Check the error logs
+4. Common fix: Make sure all files are committed and pushed
+
 ## Quick Start Options
 
 ### 1. GitHub Pages (Client-Only) - Simplest Option
