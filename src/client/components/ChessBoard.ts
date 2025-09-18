@@ -624,13 +624,14 @@ export class ChessBoard {
     this.isDragging = false;
   }
 
-  public updatePosition(): void {
-    const gameState = this.engine.getGameState();
+  public updatePosition(displayEngine?: ChessEngine): void {
+    const engine = displayEngine || this.engine;
+    const gameState = engine.getGameState();
 
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
         const square = ChessUtils.indexToSquare(row, col);
-        const piece = this.engine.getPiece(square);
+        const piece = engine.getPiece(square);
         const squareElement = this.getSquareElement(square);
         const pieceContainer = squareElement?.querySelector('.piece-container');
 

@@ -7,7 +7,7 @@ export class NotationTable {
   private moves: NotationEntry[] = [];
   private currentMoveIndex: number = -1;
   private tableElement!: HTMLElement;
-  private onPositionChangeCallback?: () => void;
+  private onPositionChangeCallback?: (moveIndex: number) => void;
 
   constructor(container: HTMLElement, engine: ChessEngine) {
     this.container = container;
@@ -15,7 +15,7 @@ export class NotationTable {
     this.createTable();
   }
 
-  public setPositionChangeCallback(callback: () => void): void {
+  public setPositionChangeCallback(callback: (moveIndex: number) => void): void {
     this.onPositionChangeCallback = callback;
   }
 
@@ -205,12 +205,12 @@ export class NotationTable {
 
     this.currentMoveIndex = moveIndex;
 
-    // Update board position using ChessEngine navigation
-    this.engine.goToMoveIndex(moveIndex);
+    // Don't change the actual engine state - just update display
+    // The main app will handle updating the display engine
     
-    // Trigger board update callback
+    // Trigger board update callback with the move index
     if (this.onPositionChangeCallback) {
-      this.onPositionChangeCallback();
+      this.onPositionChangeCallback(moveIndex);
     }
 
     this.renderMoves();

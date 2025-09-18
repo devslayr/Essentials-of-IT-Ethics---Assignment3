@@ -11,6 +11,7 @@ import './styles/main.scss';
 
 class ChessApp {
   private engine: ChessEngine;
+  private displayEngine: ChessEngine; // For notation browsing without affecting game
   private board!: ChessBoard;
   private notationTable!: NotationTable;
   private gamePanel!: GamePanel;
@@ -20,10 +21,12 @@ class ChessApp {
   private homePage!: HomePage;
   private currentView: 'home' | 'game' = 'home';
   private settings: GameSettings;
+  private isViewingHistory: boolean = false;
 
   constructor() {
     this.settings = this.loadSettings();
     this.engine = new ChessEngine();
+    this.displayEngine = new ChessEngine(); // Clone for display purposes
     this.initializeComponents();
     this.setupEventListeners();
     this.applyTheme();
@@ -120,8 +123,10 @@ class ChessApp {
     );
 
     // Setup callback for position changes during move history navigation
-    this.notationTable.setPositionChangeCallback(() => {
-      this.board.updatePosition();
+    this.notationTable.setPositionChangeCallback((moveIndex: number) => {
+      this.syncDisplayEngine(moveIndex);
+      this.board.updatePosition(this.displayEngine);
+      this.isViewingHistory = moveIndex < this.engine.getGameState().moves.length - 1;
     });
 
     this.gamePanel = new GamePanel(
@@ -311,13 +316,17 @@ class ChessApp {
   }
 
   private handleMove(move: Move): void {
-    // Ensure notation table is at current position before adding new move
-    if (!this.notationTable.isAtCurrentPosition()) {
-      this.notationTable.syncWithCurrentPosition();
-    }
+    // When a new move is made, always return to current position
+    this.isViewingHistory = false;
     
     // Update notation table
     this.notationTable.addMove(move);
+    this.notationTable.syncWithCurrentPosition();
+    
+    // Sync display engine to current game position
+    const currentMoveIndex = this.engine.getGameState().moves.length - 1;
+    this.syncDisplayEngine(currentMoveIndex);
+    this.board.updatePosition(this.displayEngine);
 
     // Update captured pieces if there was a capture
     if (move.capturedPiece) {
@@ -416,14 +425,35 @@ class ChessApp {
     }
   }
 
+  private syncDisplayEngine(moveIndex: number): void {
+    // Copy game state to display engine
+    const gameState = this.engine.getGameState();
+    this.displayEngine = new ChessEngine();
+    
+    // Copy moves history to display engine
+    gameState.moves.forEach(move => {
+      this.displayEngine.makeMove(move.from, move.to, move.promotion);
+    });
+    
+    // Navigate display engine to the specified move index
+    this.displayEngine.goToMoveIndex(moveIndex);
+  }
+
   private undoMove(): void {
     const undoneMove = this.engine.undoMove();
     if (undoneMove) {
       // Cancel any ongoing animations to prevent conflicts
       this.board.cancelAnimations();
-      this.board.updatePosition();
+      
+      // Update board to show the current engine state (after undo)
+      this.board.updatePosition(); // Use main engine, not display engine
+      
+      // Update notation table
       this.notationTable.removeLastMove();
+      this.notationTable.syncWithCurrentPosition();
+      
       this.gamePanel.updateGameStatus();
+      this.isViewingHistory = false;
       
       // If the undone move captured a piece, remove it from captured pieces
       if (undoneMove.capturedPiece) {
@@ -442,6 +472,8 @@ class ChessApp {
 
   private newGame(): void {
     this.engine = new ChessEngine();
+    this.displayEngine = new ChessEngine();
+    this.isViewingHistory = false;
     this.board.reset(this.engine);
     this.notationTable.reset();
     this.gamePanel.reset();

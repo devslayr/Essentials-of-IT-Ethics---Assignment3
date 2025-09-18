@@ -114,6 +114,9 @@ export class ChessEngine {
     const piece = this.getPiece(from)!;
     const capturedPiece = this.getPiece(to);
 
+    // Store the FEN BEFORE making the move for undo purposes
+    const fenBeforeMove = this.calculateFEN();
+
     // Create move object
     const move: Move = {
       from,
@@ -123,19 +126,18 @@ export class ChessEngine {
       promotion,
       timestamp: Date.now(),
       san: '', // Will be calculated
-      fen: '' // Will be calculated
+      fen: fenBeforeMove // Store position BEFORE the move
     };
 
     // Execute the move
     this.executeMove(move);
 
-    // Calculate SAN and FEN
+    // Calculate SAN
     move.san = this.calculateSAN(move);
-    move.fen = this.calculateFEN();
 
     // Update game state
     this.gameState.moves.push(move);
-    this.gameState.fen = move.fen;
+    this.gameState.fen = this.calculateFEN(); // Update current game FEN
     this.gameState.currentPlayer = this.gameState.currentPlayer === 'white' ? 'black' : 'white';
 
     // Update game status
@@ -881,26 +883,17 @@ export class ChessEngine {
 
     const lastMove = this.gameState.moves.pop()!;
     
-    // Remember who made the move we're undoing - it should remain their turn
-    const playerWhoMadeMove = lastMove.piece.color;
-
-    // Restore position from FEN of previous move or initial position
-    const previousFen = this.gameState.moves.length > 0
-      ? this.gameState.moves[this.gameState.moves.length - 1].fen
-      : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-
-    this.gameState = this.initializeGame(previousFen);
-
-    // Replay all moves except the last one
-    const movesToReplay = [...this.gameState.moves];
-    this.gameState.moves = [];
-
-    movesToReplay.forEach(move => {
-      this.makeMove(move.from, move.to, move.promotion);
-    });
+    // Use the FEN stored in the move (position before the move was made)
+    const movesHistory = [...this.gameState.moves]; // Save remaining moves
+    
+    // Initialize from the FEN stored in the undone move
+    this.gameState = this.initializeGame(lastMove.fen);
+    
+    // Restore the remaining moves history without replaying them
+    this.gameState.moves = movesHistory;
 
     // After undo, it should be the turn of the player who made the undone move
-    this.gameState.currentPlayer = playerWhoMadeMove;
+    this.gameState.currentPlayer = lastMove.piece.color;
 
     return lastMove;
   }

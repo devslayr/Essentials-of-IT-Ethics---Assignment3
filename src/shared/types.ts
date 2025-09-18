@@ -23,7 +23,7 @@ export interface Move {
   castling?: 'kingside' | 'queenside';
   enPassant?: boolean;
   san: string; // Standard Algebraic Notation
-  fen: string; // Position after move
+  fen: string; // Position before move (for undo functionality)
   timestamp: number;
 }
 
